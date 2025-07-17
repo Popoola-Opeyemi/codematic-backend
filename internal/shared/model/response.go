@@ -3,18 +3,12 @@
 package model
 
 type SuccessResponse struct {
-	Status  string      `json:"status"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data"`
-}
-
-type ErrorDetail struct {
-	Field string `json:"field,omitempty"`
-	Issue string `json:"issue"`
+	Status string      `json:"status"`
+	Data   interface{} `json:"data"`
 }
 
 type ErrorResponse struct {
-	Status  string        `json:"status"`
-	Message string        `json:"message"`
-	Errors  []ErrorDetail `json:"errors,omitempty"`
+	Status  string      `json:"status"`
+	Message string      `json:"message"`
+	Data    interface{} `json:"data"`
 }
