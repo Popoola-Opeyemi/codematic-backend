@@ -12,7 +12,7 @@ import (
 
 func parseEnv() error {
 
-	err := godotenv.Load()
+	err := godotenv.Overload(".env")
 	if err != nil && !os.IsNotExist(err) {
 		log.Println("godotenv.Load().Error:", err)
 		return nil

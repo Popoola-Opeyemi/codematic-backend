@@ -30,7 +30,7 @@ services:
       - .:/app
       - air-tmp:/app/tmp
     ports:
-      - "9082:8091"
+      - "9082:8092"
     env_file: .env
     environment:
       - REDIS_ADDR=${REDIS_ADDR}
@@ -49,7 +49,7 @@ services:
     image: postgres:16.2-alpine
     container_name: codematic-db
     ports:
-      - "9083:5432"
+      - "5433:5432"
     env_file: .env
     environment:
       - POSTGRES_DB=${POSTGRES_DB}

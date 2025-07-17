@@ -2,7 +2,7 @@ package db
 
 import (
 	"codematic/internal/config"
-	db "codematic/internal/infrastructure/db/sqlc"
+	dbsqlc "codematic/internal/infrastructure/db/sqlc"
 	"context"
 	"fmt"
 	"sync"
@@ -14,7 +14,7 @@ import (
 
 type DBConn struct {
 	Pool    *pgxpool.Pool
-	Queries *db.Queries
+	Queries *dbsqlc.Queries
 	logger  *zap.Logger
 	mu      sync.Mutex
 	closed  bool
@@ -77,7 +77,7 @@ func InitDB(config *config.Config, logger *zap.Logger) *DBConn {
 		break
 	}
 
-	queries := db.New(pool)
+	queries := dbsqlc.New(pool)
 
 	logger.Info("database connection initialized successfully")
 

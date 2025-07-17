@@ -24,3 +24,16 @@ func SendErrorResponse(c *fiber.Ctx, statusCode int, message string) error {
 
 	return c.Status(statusCode).JSON(response)
 }
+
+// ResponseCapture captures Fiber response body and status code for middleware use
+// Usage: call rc.Capture(c) before c.Next(), then use rc.Body and rc.StatusCode after
+// Note: Fiber does not support replacing the response writer, so we capture after c.Next()
+type ResponseCapture struct {
+	Body       []byte
+	StatusCode int
+}
+
+func (rc *ResponseCapture) Capture(c *fiber.Ctx) {
+	rc.Body = c.Response().Body()
+	rc.StatusCode = c.Response().StatusCode()
+}

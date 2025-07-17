@@ -20,6 +20,7 @@ func main() {
 	defer zapLogger.Close()
 
 	redisCache := cache.InitRedis(cfg)
+
 	defer redisCache.Close()
 
 	store := db.InitDB(cfg, zapLogger.Logger)

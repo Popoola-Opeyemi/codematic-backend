@@ -4,4 +4,4 @@ global:
 scrape_configs:
   - job_name: "dexly"
     static_configs:
-      - targets: ["dexly-dev:8091"]  # Change to dexly-dev:8091 if you're using dev
+      - targets: ["dexly-dev:8092"] 

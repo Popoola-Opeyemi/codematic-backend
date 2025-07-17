@@ -18,6 +18,19 @@ type AuditLog struct {
 	CreatedAt pgtype.Timestamptz
 }
 
+type IdempotencyKey struct {
+	ID             pgtype.UUID
+	TenantID       pgtype.UUID
+	UserID         pgtype.UUID
+	IdempotencyKey string
+	Endpoint       string
+	RequestHash    string
+	ResponseBody   []byte
+	StatusCode     pgtype.Int4
+	CreatedAt      pgtype.Timestamptz
+	UpdatedAt      pgtype.Timestamptz
+}
+
 type Provider struct {
 	ID        pgtype.UUID
 	Name      string

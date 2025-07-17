@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"time"
 
+	"crypto/sha256"
+	"encoding/hex"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/oapi-codegen/runtime/types"
@@ -281,4 +284,11 @@ func StringOrEmpty(ptr *string) string {
 		return *ptr
 	}
 	return ""
+}
+
+// HashString returns the SHA256 hash of the input string as a hex string
+func HashString(s string) string {
+	h := sha256.New()
+	h.Write([]byte(s))
+	return hex.EncodeToString(h.Sum(nil))
 }
