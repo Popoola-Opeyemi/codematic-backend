@@ -6,26 +6,21 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func SendSuccess(c *fiber.Ctx, message string, data interface{}) error {
-	return c.Status(fiber.StatusOK).JSON(model.SuccessResponse{
-		Status:  "success",
-		Message: message,
-		Data:    data,
-	})
+func SendSuccessResponse(c *fiber.Ctx, statusCode int, data interface{}) error {
+	response := model.SuccessResponse{
+		Status: "success",
+		Data:   data,
+	}
+
+	return c.Status(statusCode).JSON(response)
 }
 
-func SendCreated(c *fiber.Ctx, message string, data interface{}) error {
-	return c.Status(fiber.StatusCreated).JSON(model.SuccessResponse{
-		Status:  "success",
-		Message: message,
-		Data:    data,
-	})
-}
-
-func SendError(c *fiber.Ctx, statusCode int, message string, errs []model.ErrorDetail) error {
-	return c.Status(statusCode).JSON(model.ErrorResponse{
+func SendErrorResponse(c *fiber.Ctx, statusCode int, message string) error {
+	response := model.ErrorResponse{
 		Status:  "error",
 		Message: message,
-		Errors:  errs,
-	})
+		Data:    nil,
+	}
+
+	return c.Status(statusCode).JSON(response)
 }
