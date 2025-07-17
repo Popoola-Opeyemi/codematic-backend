@@ -1,0 +1,13 @@
+# Ignore the following files and directories
+.env
+/.idea
+/.vscode
+
+# Golang specific ignores
+*.exe
+*.out
+*.test
+*.log
+*.tmp
+*.swp
+/vendor/
