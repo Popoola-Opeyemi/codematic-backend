@@ -60,7 +60,6 @@ func LoadAppConfig() *Config {
 		PostgresDSN:           os.Getenv("POSTGRES_DSN"),
 		RedisAddr:             os.Getenv("REDIS_ADDR"),
 		RedisPassword:         os.Getenv("REDIS_PASSWORD"),
-		ElasticsearchURL:      os.Getenv("ELASTICSEARCH_URL"),
 		PORT:                  os.Getenv("PORT"),
 		ORIGINS:               os.Getenv("ORIGINS"),
 		PostgresHost:          os.Getenv("POSTGRES_HOST"),

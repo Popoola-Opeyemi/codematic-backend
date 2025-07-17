@@ -10,7 +10,6 @@ type Config struct {
 	PostgresPort          string `mapstructure:"POSTGRES_PORT"`
 	RedisAddr             string `mapstructure:"REDIS_ADDR"`
 	RedisPassword         string `mapstructure:"REDIS_PASSWORD"`
-	ElasticsearchURL      string `mapstructure:"ELASTICSEARCH_URL"`
 	PORT                  string `mapstructure:"PORT"`
 	ORIGINS               string `mapstructure:"ORIGINS"`
 	JwtSecret             string `mapstructure:"JWT_SECRET"`

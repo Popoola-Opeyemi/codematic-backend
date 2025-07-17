@@ -13,12 +13,10 @@ services:
     environment:
       - REDIS_ADDR=${REDIS_ADDR}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - ELASTICSEARCH_URL=${ELASTICSEARCH_URL}
       - POSTGRES_DSN=${POSTGRES_DSN}
       - KAFKA_BROKER=${KAFKA_BROKER:-kafka:9092}
     depends_on:
       - redis
-      - elasticsearch
       - postgres
       - kafka
 
@@ -37,12 +35,10 @@ services:
     environment:
       - REDIS_ADDR=${REDIS_ADDR}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - ELASTICSEARCH_URL=${ELASTICSEARCH_URL}
       - POSTGRES_DSN=${POSTGRES_DSN}
       - KAFKA_BROKER=${KAFKA_BROKER:-kafka:9092}
     depends_on:
       - redis
-      - elasticsearch
       - postgres
       - grafana
       - prometheus
@@ -69,23 +65,6 @@ services:
       - "9084:6379"
     volumes:
       - redis-data:/data
-
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
-    container_name: codematic-es
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - network.host=0.0.0.0
-    ports:
-      - "9085:9200"
-    volumes:
-      - es-data:/usr/share/elasticsearch/data
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-    mem_limit: 1g
 
   prometheus:
     image: prom/prometheus:latest

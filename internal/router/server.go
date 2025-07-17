@@ -1,0 +1,113 @@
+package router
+
+import (
+	"codematic/internal/config"
+	"codematic/internal/handler"
+	"fmt"
+	"log"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
+	"time"
+
+	"github.com/gofiber/adaptor/v2"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/monitor"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
+)
+
+var prometheusRegisterOnce sync.Once
+
+func RegisterPrometheusCollectors() {
+	prometheusRegisterOnce.Do(func() {
+		prometheus.MustRegister(collectors.NewGoCollector())
+		prometheus.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+	})
+}
+
+func InitRouterWithConfig(env *config.Config, cache *redis.Client, zapLogger *zap.Logger) *fiber.App {
+	app := fiber.New(fiber.Config{
+		IdleTimeout:  5 * time.Second, // Helps close idle connections
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	})
+
+	origins := env.ORIGINS
+	if origins == "" {
+		origins = "*"
+	}
+
+	app.Use(cors.New(cors.Config{
+		AllowOrigins:  origins,
+		AllowMethods:  "GET,POST,PUT,DELETE,OPTIONS",
+		AllowHeaders:  "Origin, Content-Type, Accept, Authorization",
+		ExposeHeaders: "Content-Length",
+		MaxAge:        300,
+	}))
+
+	// Custom zap logger middleware
+	app.Use(func(c *fiber.Ctx) error {
+		start := time.Now()
+		err := c.Next()
+		stop := time.Now()
+
+		zapLogger.Info("HTTP Request",
+			zap.String("method", c.Method()),
+			zap.String("path", c.OriginalURL()),
+			zap.Int("status", c.Response().StatusCode()),
+			zap.Duration("latency", stop.Sub(start)),
+			zap.String("ip", c.IP()),
+			zap.String("user-agent", c.Get("User-Agent")),
+		)
+
+		return err
+	})
+
+	app.Get("/metrics", adaptor.HTTPHandler(promhttp.Handler()))
+
+	// Fiber monitor dashboard (move from /metrics to /dashboard)
+	app.Get("/dashboard", monitor.New())
+
+	return app
+}
+
+func InitHandlers(env *handler.Environment, handlers []handler.IHandler) error {
+
+	for _, handler := range handlers {
+		if err := handler.Init("/api", env); err != nil {
+			return fmt.Errorf("failed to initialize handler: %v", err)
+		}
+	}
+
+	return nil
+}
+
+func RunWithGracefulShutdown(app *fiber.App, port string) {
+	go func() {
+		if err := app.Listen("0.0.0.0:" + port); err != nil {
+			log.Fatalf("Failed to start server: %v", err)
+		}
+	}()
+
+	fmt.Printf("🚀🚀 Server is running at http://localhost:%s\n", port)
+
+	// Wait for interrupt signal
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+
+	fmt.Println("Shutting down server...")
+
+	// Shutdown the app with a timeout context if needed
+	if err := app.Shutdown(); err != nil {
+		log.Fatalf("Server forced to shutdown: %v", err)
+	}
+
+	fmt.Println("Server shutdown complete.")
+}
