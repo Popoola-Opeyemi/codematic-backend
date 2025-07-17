@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"codematic-backend/internal/shared/model"
+	"codematic/internal/shared/model"
 
 	"github.com/gofiber/fiber/v2"
 )

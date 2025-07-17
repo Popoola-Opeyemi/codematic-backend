@@ -1,7 +1,7 @@
 package cache
 
 import (
-	"codematic-backend/internal/shared/model"
+	"codematic/internal/shared/model"
 	"context"
 	"encoding/json"
 	"time"

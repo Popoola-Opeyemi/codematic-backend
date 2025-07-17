@@ -59,7 +59,7 @@ COPY --from=builder /etc/passwd /etc/passwd
 
 WORKDIR /app
 
-COPY --from=builder /app/codematic /app/codematic-backend
+COPY --from=builder /app/codematic /app/codematic
 
 USER 1000
 EXPOSE 8080

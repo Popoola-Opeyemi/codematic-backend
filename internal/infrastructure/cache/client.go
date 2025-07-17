@@ -1,7 +1,7 @@
 package cache
 
 import (
-	"codematic-backend/internal/config"
+	"codematic/internal/config"
 	"context"
 	"log"
 	"time"

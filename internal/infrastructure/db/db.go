@@ -1,8 +1,8 @@
 package db
 
 import (
-	"codematic-backend/internal/config"
-	db "codematic-backend/internal/infrastructure/db/sqlc"
+	"codematic/internal/config"
+	db "codematic/internal/infrastructure/db/sqlc"
 	"context"
 	"fmt"
 	"sync"
