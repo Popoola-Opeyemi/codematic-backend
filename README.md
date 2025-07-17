@@ -76,7 +76,7 @@ go run cmd/main.go
 ---
 
 ## API Documentation
-- **Swagger UI**: [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html)
+- **Swagger UI**: [http://localhost:8092/swagger/index.html](http://localhost:8092/swagger/index.html)
 - **Base Path**: `/api`
 - **Auth**: JWT Bearer token in `Authorization` header
 

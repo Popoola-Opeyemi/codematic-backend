@@ -19,7 +19,7 @@ RUN go mod download
 COPY . .
 
 ##############################
-# STAGE 2: Dev image with Air
+# STAGE 2: Dev image with Air and Swag
 ##############################
 FROM base AS dev
 
@@ -29,11 +29,15 @@ RUN apk add --no-cache curl && \
     mv ./bin/air /usr/local/bin/ && \
     rm -rf ./bin
 
+# ✅ Install swag CLI (Swagger/OpenAPI generator)
+# We unset GOOS and GOARCH temporarily so Go installs a binary for this container's platform
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    env -u GOOS -u GOARCH go install github.com/swaggo/swag/cmd/swag@latest && \
+    mv /go/bin/swag /usr/local/bin/swag
 
-# Set workdir to /app to match docker-compose volume mount
 WORKDIR /app
 
-# Air will rebuild and restart the server
 CMD ["air"]
 
 ##############################

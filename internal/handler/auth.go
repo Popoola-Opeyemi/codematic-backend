@@ -54,6 +54,16 @@ func (a *Auth) Init(basePath string, env *Environment) error {
 
 }
 
+// Signup godoc
+// @Summary      Register a new user
+// @Description  Creates a new user account
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        signupRequest  body  auth.SignupRequest  true  "Signup request"
+// @Success      201  {object}  interface{}
+// @Failure      400  {object}  model.ErrorResponse
+// @Router       /auth/signup [post]
 func (a *Auth) Signup(c *fiber.Ctx) error {
 	var req auth.SignupRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -82,6 +92,16 @@ func (a *Auth) Signup(c *fiber.Ctx) error {
 	return utils.SendSuccessResponse(c, fiber.StatusCreated, user)
 }
 
+// Login godoc
+// @Summary      Login a user
+// @Description  Authenticates a user and returns tokens
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        loginRequest  body  auth.LoginRequest  true  "Login request"
+// @Success      200  {object}  interface{}
+// @Failure      400  {object}  model.ErrorResponse
+// @Router       /auth/login [post]
 func (a *Auth) Login(c *fiber.Ctx) error {
 	var req auth.LoginRequest
 	if err := c.BodyParser(&req); err != nil {

@@ -1,0 +1,15 @@
+basePath: /
+host: localhost:9082
+info:
+  contact:
+    email: code.popoola@gmail.com
+    name: API Support
+  description: This is the Codematic API documentation.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Codematic API
+  version: "1.0"
+paths: {}
+swagger: "2.0"

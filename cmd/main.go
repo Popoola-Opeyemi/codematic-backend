@@ -1,3 +1,13 @@
+// @title Codematic API
+// @version 1.0
+// @description This is the Codematic API documentation.
+// @termsOfService http://swagger.io/terms/
+// @contact.name API Support
+// @contact.email code.popoola@gmail.com
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+// @host localhost:9082
+// @BasePath /
 package main
 
 import (
@@ -59,7 +69,7 @@ func main() {
 		router.RunWithGracefulShutdown(app, cfg.PORT)
 	}()
 
-	// Wait for termination signal
+	// Wait for termination signal.
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
