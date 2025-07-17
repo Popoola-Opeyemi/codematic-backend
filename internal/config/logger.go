@@ -100,7 +100,6 @@ func initLoggerInternal() *LoggerManager {
 	}
 }
 
-// Close properly cleans up logger resources
 func (lm *LoggerManager) Close() error {
 	lm.mu.Lock()
 	defer lm.mu.Unlock()
@@ -109,14 +108,20 @@ func (lm *LoggerManager) Close() error {
 		return nil
 	}
 
-	// Sync any buffered logs
-	if err := lm.Logger.Sync(); err != nil {
-		// Don't return here, still try to close the file
-		// Just log to stdout as a fallback
-		os.Stderr.WriteString("failed to sync logger: " + err.Error() + "\n")
+	// Attempt to sync only fileWriter, skip os.Stdout
+	if lm.fileWriter != nil {
+		if err := lm.fileWriter.Sync(); err != nil {
+			os.Stderr.WriteString("failed to sync file writer: " + err.Error() + "\n")
+		}
 	}
 
-	// Close the file writer
+	if err := lm.Logger.Sync(); err != nil {
+		// Ignore known stdout/stderr sync errors
+		if !isIgnorableSyncError(err) {
+			os.Stderr.WriteString("failed to sync logger: " + err.Error() + "\n")
+		}
+	}
+
 	if lm.fileWriter != nil {
 		if err := lm.fileWriter.Close(); err != nil {
 			return err
@@ -126,4 +131,9 @@ func (lm *LoggerManager) Close() error {
 
 	lm.closed = true
 	return nil
+}
+
+func isIgnorableSyncError(err error) bool {
+	// Match the common error text
+	return err.Error() == "sync /dev/stdout: invalid argument" || err.Error() == "sync /dev/stderr: invalid argument"
 }
