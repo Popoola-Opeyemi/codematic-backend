@@ -20,12 +20,14 @@ func NewJWTManager(jwtSecret, refreshTokenSecret string) *JWTManager {
 	}
 }
 
-func (j *JWTManager) GenerateJWT(userID, tokenID string) (string, error) {
+func (j *JWTManager) GenerateJWT(data model.JWTData) (string, error) {
 	claims := model.Claims{
-		UserID: userID,
+		UserID:   data.UserID,
+		Email:    data.Email,
+		TenantID: data.TenantID,
 		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   userID,
-			ID:        tokenID,
+			Subject:   data.UserID,
+			ID:        data.TokenID,
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
@@ -35,12 +37,14 @@ func (j *JWTManager) GenerateJWT(userID, tokenID string) (string, error) {
 	return token.SignedString(j.JWTSecret)
 }
 
-func (j *JWTManager) GenerateRefreshToken(userID string, tokenID string) (string, error) {
+func (j *JWTManager) GenerateRefreshToken(data model.JWTData) (string, error) {
 	claims := model.Claims{
-		UserID: userID,
+		UserID:   data.UserID,
+		Email:    data.Email,
+		TenantID: data.TenantID,
 		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   userID,
-			ID:        tokenID,
+			Subject:   data.UserID,
+			ID:        data.TokenID,
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},

@@ -6,9 +6,13 @@ import (
 )
 
 type Service interface {
+	CreateUser(ctx context.Context, req *CreateUserRequest) (db.User, error)
+	GetUserByEmail(ctx context.Context, email string) (db.User, error)
+	GetUserByEmailAndTenantID(ctx context.Context, email string, tenantID string) (db.User, error)
 }
 
 type Repository interface {
 	GetUserByEmail(ctx context.Context, email string) (db.User, error)
 	CreateUser(ctx context.Context, params db.CreateUserParams) (db.User, error)
+	GetUserByEmailAndTenantID(ctx context.Context, email string, tenantID string) (db.User, error)
 }

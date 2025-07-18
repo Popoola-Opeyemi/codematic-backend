@@ -91,6 +91,32 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 	return i, err
 }
 
+const getUserByEmailAndTenantID = `-- name: GetUserByEmailAndTenantID :one
+SELECT id, tenant_id, email, phone, password_hash, is_active, created_at, updated_at FROM users
+WHERE email = $1 AND tenant_id = $2
+`
+
+type GetUserByEmailAndTenantIDParams struct {
+	Email    string
+	TenantID pgtype.UUID
+}
+
+func (q *Queries) GetUserByEmailAndTenantID(ctx context.Context, arg GetUserByEmailAndTenantIDParams) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByEmailAndTenantID, arg.Email, arg.TenantID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.Email,
+		&i.Phone,
+		&i.PasswordHash,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getUserByID = `-- name: GetUserByID :one
 SELECT id, tenant_id, email, phone, password_hash, is_active, created_at, updated_at FROM users
 WHERE id = $1

@@ -2,9 +2,9 @@ package auth
 
 type (
 	LoginRequest struct {
-		Email      string `json:"email" validate:"required,email"`
-		Password   string `json:"password" validate:"required,min=8"`
-		TenantSlug string `json:"tenant_slug" validate:"required"`
+		Email    string `json:"email" validate:"required,email"`
+		Password string `json:"password" validate:"required,min=8"`
+		TenantID string `json:"tenant_id" validate:"required"`
 	}
 
 	LoginResponse struct {
@@ -25,13 +25,12 @@ type (
 	}
 
 	SignupRequest struct {
-		FirstName  string `json:"first_name" validate:"required"`
-		LastName   string `json:"last_name" validate:"required"`
-		Email      string `json:"email" validate:"required,email"`
-		Username   string `json:"username" validate:"required"`
-		Phone      string `json:"phone" validate:"required"`
-		Password   string `json:"password" validate:"required,min=8"`
-		TenantSlug string `json:"tenant_slug" validate:"required"`
+		FirstName string `json:"first_name" validate:"required"`
+		LastName  string `json:"last_name" validate:"required"`
+		Email     string `json:"email" validate:"required,email"`
+		Phone     string `json:"phone" validate:"required"`
+		Password  string `json:"password" validate:"required,min=8"`
+		TenantID  string `json:"tenant_id" validate:"required"`
 	}
 
 	SignupResponse struct {

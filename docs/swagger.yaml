@@ -7,12 +7,12 @@ definitions:
       password:
         minLength: 8
         type: string
-      tenant_slug:
+      tenant_id:
         type: string
     required:
     - email
     - password
-    - tenant_slug
+    - tenant_id
     type: object
   auth.SignupRequest:
     properties:
@@ -27,9 +27,7 @@ definitions:
         type: string
       phone:
         type: string
-      tenant_slug:
-        type: string
-      username:
+      tenant_id:
         type: string
     required:
     - email
@@ -37,8 +35,7 @@ definitions:
     - last_name
     - password
     - phone
-    - tenant_slug
-    - username
+    - tenant_id
     type: object
   model.ErrorResponse:
     properties:

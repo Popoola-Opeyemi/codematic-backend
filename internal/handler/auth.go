@@ -2,6 +2,7 @@ package handler
 
 import (
 	"codematic/internal/domain/auth"
+	"codematic/internal/domain/tenants"
 	"codematic/internal/domain/user"
 	"codematic/internal/middleware"
 	"codematic/internal/shared/model"
@@ -24,10 +25,13 @@ func (a *Auth) Init(basePath string, env *Environment) error {
 
 	userRepo := user.NewRepository(env.DB.Queries)
 	authRepo := auth.NewRepository(env.DB.Queries)
+	tenantRepo := tenants.NewRepository(env.DB.Queries)
+	userService := user.NewService(userRepo, env.JWTManager, env.Logger)
 
 	a.service = auth.NewService(
-		userRepo,
+		userService,
 		authRepo,
+		tenantRepo,
 		env.CacheManager,
 		env.JWTManager,
 		env.Config,
@@ -79,7 +83,6 @@ func (a *Auth) Signup(c *fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
-	// Call service (to be implemented in service layer)
 	user, err := a.service.Signup(ctx, &req)
 	if err != nil {
 		a.env.Logger.Error("Failed to signup", zap.Error(err))
@@ -119,7 +122,7 @@ func (a *Auth) Login(c *fiber.Ctx) error {
 		TokenID:   uuid.New().String(),
 	}
 
-	auth, err := a.service.Login(ctx, &req, &sessionInfo)
+	auth, err := a.service.Login(ctx, &req, sessionInfo)
 	if err != nil {
 		a.env.Logger.Error("Failed to login", zap.Error(err))
 		return utils.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())

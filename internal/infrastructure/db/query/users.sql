@@ -11,6 +11,10 @@ WHERE id = $1;
 SELECT * FROM users
 WHERE email = $1;
 
+-- name: GetUserByEmailAndTenantID :one
+SELECT * FROM users
+WHERE email = $1 AND tenant_id = $2;
+
 -- name: ListUsersByTenant :many
 SELECT * FROM users
 WHERE tenant_id = $1

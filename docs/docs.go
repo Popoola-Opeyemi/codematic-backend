@@ -314,7 +314,7 @@ const docTemplate = `{
             "required": [
                 "email",
                 "password",
-                "tenant_slug"
+                "tenant_id"
             ],
             "properties": {
                 "email": {
@@ -324,7 +324,7 @@ const docTemplate = `{
                     "type": "string",
                     "minLength": 8
                 },
-                "tenant_slug": {
+                "tenant_id": {
                     "type": "string"
                 }
             }
@@ -337,8 +337,7 @@ const docTemplate = `{
                 "last_name",
                 "password",
                 "phone",
-                "tenant_slug",
-                "username"
+                "tenant_id"
             ],
             "properties": {
                 "email": {
@@ -357,10 +356,7 @@ const docTemplate = `{
                 "phone": {
                     "type": "string"
                 },
-                "tenant_slug": {
-                    "type": "string"
-                },
-                "username": {
+                "tenant_id": {
                     "type": "string"
                 }
             }

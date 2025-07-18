@@ -2,7 +2,10 @@ package user
 
 import (
 	db "codematic/internal/infrastructure/db/sqlc"
+	"codematic/internal/shared/utils"
 	"context"
+
+	"github.com/google/uuid"
 )
 
 type userRepository struct {
@@ -19,4 +22,15 @@ func (r *userRepository) GetUserByEmail(ctx context.Context, email string) (db.U
 
 func (r *userRepository) CreateUser(ctx context.Context, params db.CreateUserParams) (db.User, error) {
 	return r.q.CreateUser(ctx, params)
+}
+
+func (r *userRepository) GetUserByEmailAndTenantID(ctx context.Context, email string, tenantID string) (db.User, error) {
+	uuidTenant, err := uuid.Parse(tenantID)
+	if err != nil {
+		return db.User{}, err
+	}
+	return r.q.GetUserByEmailAndTenantID(ctx, db.GetUserByEmailAndTenantIDParams{
+		Email:    email,
+		TenantID: utils.ToUUID(uuidTenant),
+	})
 }

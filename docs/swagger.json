@@ -308,7 +308,7 @@
             "required": [
                 "email",
                 "password",
-                "tenant_slug"
+                "tenant_id"
             ],
             "properties": {
                 "email": {
@@ -318,7 +318,7 @@
                     "type": "string",
                     "minLength": 8
                 },
-                "tenant_slug": {
+                "tenant_id": {
                     "type": "string"
                 }
             }
@@ -331,8 +331,7 @@
                 "last_name",
                 "password",
                 "phone",
-                "tenant_slug",
-                "username"
+                "tenant_id"
             ],
             "properties": {
                 "email": {
@@ -351,10 +350,7 @@
                 "phone": {
                     "type": "string"
                 },
-                "tenant_slug": {
-                    "type": "string"
-                },
-                "username": {
+                "tenant_id": {
                     "type": "string"
                 }
             }

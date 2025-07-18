@@ -2,9 +2,9 @@ package auth
 
 import (
 	"codematic/internal/config"
+	"codematic/internal/domain/tenants"
 	"codematic/internal/domain/user"
 	"codematic/internal/infrastructure/cache"
-	db "codematic/internal/infrastructure/db/sqlc"
 	"codematic/internal/shared/model"
 	"codematic/internal/shared/utils"
 	"context"
@@ -13,25 +13,31 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 )
 
 type authService struct {
-	userRepo     user.Repository
+	userService  user.Service
 	authRepo     Repository
+	tenantRepo   tenants.Repository
 	cacheManager cache.CacheManager
 	JwtManager   *utils.JWTManager
 	cfg          *config.Config
 	logger       *zap.Logger
 }
 
-func NewService(userRepo user.Repository, authRepo Repository,
-	cacheManager cache.CacheManager, jwtManager *utils.JWTManager,
-	cfg *config.Config, logger *zap.Logger) Service {
+func NewService(
+	userService user.Service,
+	authRepo Repository,
+	tenantRepo tenants.Repository,
+	cacheManager cache.CacheManager,
+	jwtManager *utils.JWTManager,
+	cfg *config.Config,
+	logger *zap.Logger) Service {
 	return &authService{
-		userRepo:     userRepo,
+		userService:  userService,
 		authRepo:     authRepo,
+		tenantRepo:   tenantRepo,
 		cacheManager: cacheManager,
 		JwtManager:   jwtManager,
 		cfg:          cfg,
@@ -40,36 +46,20 @@ func NewService(userRepo user.Repository, authRepo Repository,
 }
 
 func (s *authService) Signup(ctx context.Context, req *SignupRequest) (User, error) {
-
-	email := strings.ToLower(strings.TrimSpace(req.Email))
-
-	// Check if user already exists
-	existing, err := s.userRepo.GetUserByEmail(ctx, email)
-	if err == nil && existing.ID != (pgtype.UUID{}) {
-		return User{}, errors.New("user already exists")
-	}
-
-	// Get tenant by slug
-	tenant, err := s.authRepo.GetTenantBySlug(ctx, req.TenantSlug)
+	// Get tenant by ID
+	tenant, err := s.tenantRepo.GetTenantByID(ctx, req.TenantID)
 	if err != nil {
 		return User{}, errors.New("invalid tenant")
 	}
 
-	hash, err := utils.HashPassword(req.Password)
-	if err != nil {
-		return User{}, errors.New("failed to hash password")
+	userReq := &user.CreateUserRequest{
+		TenantID: tenant.ID.String(),
+		Email:    req.Email,
+		Phone:    req.Phone,
+		Password: req.Password,
+		IsActive: true,
 	}
-
-	userID := uuid.New()
-	params := db.CreateUserParams{
-		ID:           utils.ToUUID(userID),
-		TenantID:     tenant.ID,
-		Email:        email,
-		Phone:        utils.ToDBString(&req.Phone),
-		PasswordHash: hash,
-		IsActive:     pgtype.Bool{Bool: true, Valid: true},
-	}
-	created, err := s.userRepo.CreateUser(ctx, params)
+	created, err := s.userService.CreateUser(ctx, userReq)
 	if err != nil {
 		return User{}, err
 	}
@@ -85,11 +75,11 @@ func (s *authService) Signup(ctx context.Context, req *SignupRequest) (User, err
 }
 
 func (s *authService) Login(ctx context.Context, req *LoginRequest,
-	sessionInfo interface{}) (interface{}, error) {
+	sessionInfo model.UserSessionInfo) (interface{}, error) {
 
 	email := strings.ToLower(strings.TrimSpace(req.Email))
 
-	user, err := s.userRepo.GetUserByEmail(ctx, email)
+	user, err := s.userService.GetUserByEmailAndTenantID(ctx, email, req.TenantID)
 	if err != nil || !user.IsActive.Bool {
 		return nil, errors.New(model.InvalidCredentials)
 	}
@@ -99,25 +89,23 @@ func (s *authService) Login(ctx context.Context, req *LoginRequest,
 	}
 
 	tokenID := uuid.New().String()
-	jwt, err := s.JwtManager.GenerateJWT(user.ID.String(), tokenID)
+	jwtData := model.JWTData{
+		UserID:   user.ID.String(),
+		Email:    user.Email,
+		TenantID: user.TenantID.String(),
+		TokenID:  tokenID,
+	}
+	jwt, err := s.JwtManager.GenerateJWT(jwtData)
 	if err != nil {
 		return nil, errors.New("failed to generate token")
 	}
 
-	refresh, err := s.JwtManager.GenerateRefreshToken(user.ID.String(), tokenID)
+	refresh, err := s.JwtManager.GenerateRefreshToken(jwtData)
 	if err != nil {
 		return nil, errors.New("failed to generate refresh token")
 	}
 
-	// Store session in cache
-	if s.cacheManager != nil {
-		sess := &model.UserSessionInfo{
-			UserAgent: "",
-			IPAddress: "",
-			TokenID:   tokenID,
-		}
-		s.cacheManager.SetSession(ctx, tokenID, sess, 24*time.Hour)
-	}
+	s.cacheManager.SetSession(ctx, tokenID, &sessionInfo, 24*time.Hour)
 
 	return LoginResponse{
 		AccessToken:  jwt,
@@ -140,16 +128,24 @@ func (s *authService) RefreshToken(ctx context.Context, refreshToken string) (in
 	if err != nil {
 		return nil, errors.New("invalid or expired refresh token")
 	}
-	userID := claims.UserID
-	tokenID := uuid.New().String()
-	jwt, err := s.JwtManager.GenerateJWT(userID, tokenID)
+
+	jwtData := model.JWTData{
+		UserID:   claims.UserID,
+		Email:    claims.Email,
+		TenantID: claims.TenantID,
+		TokenID:  claims.TenantID,
+	}
+
+	jwt, err := s.JwtManager.GenerateJWT(jwtData)
 	if err != nil {
 		return nil, errors.New("failed to generate token")
 	}
-	refresh, err := s.JwtManager.GenerateRefreshToken(userID, tokenID)
+
+	refresh, err := s.JwtManager.GenerateRefreshToken(jwtData)
 	if err != nil {
 		return nil, errors.New("failed to generate refresh token")
 	}
+
 	return map[string]interface{}{
 		"access_token":  jwt,
 		"refresh_token": refresh,

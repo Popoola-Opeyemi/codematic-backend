@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"time"
 
 	"crypto/sha256"
@@ -291,4 +292,11 @@ func HashString(s string) string {
 	h := sha256.New()
 	h.Write([]byte(s))
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+// isValidEmail uses a simple regex for email validation
+func IsValidEmail(email string) bool {
+	// Simple RFC 5322 regex
+	var re = regexp.MustCompile(`^[a-zA-Z0-9._%%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	return re.MatchString(email)
 }
