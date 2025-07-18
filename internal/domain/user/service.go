@@ -20,3 +20,5 @@ func NewService(repo Repository, jwtManager *utils.JWTManager,
 		logger:     logger,
 	}
 }
+
+// Implement tenants api endpoints and auth handlers

@@ -15,5 +15,14 @@ WHERE slug = $1;
 SELECT * FROM tenants
 ORDER BY created_at DESC;
 
+-- name: UpdateTenant :one
+UPDATE tenants
+SET name = $2,
+    slug = $3,
+    updated_at = now()
+WHERE id = $1
+RETURNING *;
+
 -- name: DeleteTenant :exec
-DELETE FROM tenants WHERE id = $1;
+DELETE FROM tenants
+WHERE id = $1;

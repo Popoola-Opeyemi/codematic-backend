@@ -7,10 +7,13 @@ import (
 	"codematic/internal/shared/model"
 	"codematic/internal/shared/utils"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
+
+var validate = validator.New()
 
 type IHandler interface {
 	Init(string, *Environment) error

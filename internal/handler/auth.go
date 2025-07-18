@@ -9,13 +9,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
-
-var validate = validator.New()
 
 type Auth struct {
 	service auth.Service

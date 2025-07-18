@@ -37,7 +37,8 @@ func (q *Queries) CreateTenant(ctx context.Context, arg CreateTenantParams) (Ten
 }
 
 const deleteTenant = `-- name: DeleteTenant :exec
-DELETE FROM tenants WHERE id = $1
+DELETE FROM tenants
+WHERE id = $1
 `
 
 func (q *Queries) DeleteTenant(ctx context.Context, id pgtype.UUID) error {
@@ -110,4 +111,32 @@ func (q *Queries) ListTenants(ctx context.Context) ([]Tenant, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateTenant = `-- name: UpdateTenant :one
+UPDATE tenants
+SET name = $2,
+    slug = $3,
+    updated_at = now()
+WHERE id = $1
+RETURNING id, name, slug, created_at, updated_at
+`
+
+type UpdateTenantParams struct {
+	ID   pgtype.UUID
+	Name string
+	Slug string
+}
+
+func (q *Queries) UpdateTenant(ctx context.Context, arg UpdateTenantParams) (Tenant, error) {
+	row := q.db.QueryRow(ctx, updateTenant, arg.ID, arg.Name, arg.Slug)
+	var i Tenant
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Slug,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
