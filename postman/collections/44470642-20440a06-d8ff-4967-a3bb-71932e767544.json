@@ -1,0 +1,113 @@
+{
+	"info": {
+		"_postman_id": "44470642-20440a06-d8ff-4967-a3bb-71932e767544",
+		"name": "Codematic Backend",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "auth",
+			"item": [
+				{
+					"name": "register",
+					"id": "44470642-3cc98f7a-e765-4e58-85dd-997618dc139c",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n \"first_name\":\"Samuel\",\n \"last_name\":\"Wilson\",\n \"email\":\"samwilson@mailinator.com\",\n \"phone\":\"+2349129282811\",\n \"tenant_id\":\"5c5c14bb-47f5-479f-ba19-01f311cbdd87\",\n \"password\":\"SamuelWilson\"\n\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API_BASE_URL}}/auth/signup",
+							"host": [
+								"{{API_BASE_URL}}"
+							],
+							"path": [
+								"auth",
+								"signup"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "login",
+					"id": "44470642-c9d810c0-9495-4bf6-9c35-7a3a1b46bca0",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\":\"samwilson@mailinator.com\",\n    \"password\":\"SamuelWilson\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API_BASE_URL}}/auth/login",
+							"host": [
+								"{{API_BASE_URL}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"id": "44470642-7800f132-c207-4bd3-bced-9882dfa2ce44"
+		},
+		{
+			"name": "wallet",
+			"item": [],
+			"id": "44470642-39b3b0bd-0d70-4726-ad14-a5354dc5711f"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"id": "6f581845-37bf-424b-a35a-29768f2d9d59",
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"id": "9f2740c4-3bbf-44c3-9eb9-d6d5064b1930",
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "API_BASE_URL",
+			"value": "http://localhost:9082/api",
+			"type": "string"
+		}
+	]
+}
