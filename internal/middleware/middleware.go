@@ -1,8 +1,8 @@
 package middleware
 
 import (
+	"codematic/internal/config"
 	"codematic/internal/infrastructure/cache"
-	"codematic/internal/infrastructure/db"
 	"codematic/internal/shared/model"
 	"codematic/internal/shared/utils"
 	"context"
@@ -10,6 +10,8 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 )
+
+var logger = config.GetLogger()
 
 func JWTMiddleware(jwtManager *utils.JWTManager,
 	cacheManager cache.CacheManager) fiber.Handler {
@@ -71,46 +73,46 @@ func TenantMiddleware() fiber.Handler {
 	}
 }
 
-// IdempotencyMiddleware checks for Idempotency-Key and ensures idempotent processing of requests
-func IdempotencyMiddleware(dbConn *db.DBConn) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		key := c.Get("Idempotency-Key")
-		tenantID, _ := c.Locals("tenant_id").(string)
-		userID, _ := c.Locals("user_id").(string)
-		endpoint := c.OriginalURL()
+// // IdempotencyMiddleware checks for Idempotency-Key and ensures idempotent processing of requests
+// func IdempotencyMiddleware(dbConn *db.DBConn) fiber.Handler {
+// 	return func(c *fiber.Ctx) error {
+// 		key := c.Get("Idempotency-Key")
+// 		tenantID, _ := c.Locals("tenant_id").(string)
+// 		userID, _ := c.Locals("user_id").(string)
+// 		endpoint := c.OriginalURL()
 
-		if key == "" || tenantID == "" {
-			return c.Next() // No idempotency key or tenant, skip
-		}
+// 		if key == "" || tenantID == "" {
+// 			return c.Next() // No idempotency key or tenant, skip
+// 		}
 
-		requestHash := utils.HashString(string(c.Body()))
+// 		requestHash := utils.HashString(string(c.Body()))
 
-		stored, found, err := dbConn.GetIdempotencyRecord(
-			c.Context(), tenantID,
-			key, endpoint, requestHash,
-		)
-		if err != nil {
-			return utils.SendErrorResponse(c, fiber.StatusInternalServerError,
-				"Idempotency check failed")
-		}
-		if found && stored != nil {
-			c.Status(int(stored.StatusCode.Int32))
-			return c.Send(stored.ResponseBody)
-		}
+// 		stored, found, err := dbConn.GetIdempotencyRecord(
+// 			c.Context(), tenantID,
+// 			key, endpoint, requestHash,
+// 		)
+// 		if err != nil {
+// 			return utils.SendErrorResponse(c, fiber.StatusInternalServerError,
+// 				"Idempotency check failed")
+// 		}
+// 		if found && stored != nil {
+// 			c.Status(int(stored.StatusCode.Int32))
+// 			return c.Send(stored.ResponseBody)
+// 		}
 
-		err = c.Next()
+// 		err = c.Next()
 
-		// Capture response after handler
-		rc := &utils.ResponseCapture{}
-		rc.Capture(c)
+// 		// Capture response after handler
+// 		rc := &utils.ResponseCapture{}
+// 		rc.Capture(c)
 
-		if err == nil {
-			_ = dbConn.SaveIdempotencyRecord(c.Context(),
-				tenantID, userID, key,
-				endpoint, requestHash,
-				rc.Body, rc.StatusCode,
-			)
-		}
-		return err
-	}
-}
+// 		if err == nil {
+// 			_ = dbConn.SaveIdempotencyRecord(c.Context(),
+// 				tenantID, userID, key,
+// 				endpoint, requestHash,
+// 				rc.Body, rc.StatusCode,
+// 			)
+// 		}
+// 		return err
+// 	}
+// }

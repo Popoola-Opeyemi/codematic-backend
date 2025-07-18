@@ -26,8 +26,8 @@ create table "transactions" (
   "wallet_id" uuid not null references wallets(id),
   "provider_id" uuid not null references providers(id),
   "reference" varchar unique not null,
-  "type" varchar not null, -- 'deposit', 'withdrawal', 'transfer'
-  "status" varchar not null, -- 'pending', 'success', 'failed'
+  "type" varchar not null CHECK (type IN ('deposit', 'withdrawal', 'transfer')), -- 'deposit', 'withdrawal', 'transfer'
+  "status" varchar not null VARCHAR CHECK (status IN ('pending', 'completed', 'failed')), -- 'pending', 'success', 'failed'
   "amount" decimal(18, 2) not null,
   "fee" decimal(18, 2) default 0,
   "metadata" jsonb,

@@ -64,6 +64,34 @@ definitions:
       slug:
         type: string
     type: object
+  wallet.Transaction:
+    properties:
+      amount:
+        type: number
+      created_at:
+        type: string
+      error:
+        type: string
+      fee:
+        type: number
+      id:
+        type: string
+      metadata:
+        additionalProperties: true
+        type: object
+      provider:
+        type: string
+      reference:
+        type: string
+      status:
+        type: string
+      type:
+        type: string
+      updated_at:
+        type: string
+      wallet_id:
+        type: string
+    type: object
 host: localhost:9082
 info:
   contact:
@@ -264,4 +292,191 @@ paths:
       summary: Get tenant by slug
       tags:
       - tenants
+  /wallet/{wallet_id}/balance:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the balance of a wallet
+      parameters:
+      - description: Wallet ID
+        in: path
+        name: wallet_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get wallet balance
+      tags:
+      - wallet
+  /wallet/{wallet_id}/transactions:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the transaction history for a wallet
+      parameters:
+      - description: Wallet ID
+        in: path
+        name: wallet_id
+        required: true
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/wallet.Transaction'
+              type: array
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get wallet transactions
+      tags:
+      - wallet
+  /wallet/deposit:
+    post:
+      consumes:
+      - application/json
+      description: Deposits a specified amount into the user's wallet
+      parameters:
+      - description: Deposit request
+        in: body
+        name: depositRequest
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Deposit funds into a wallet
+      tags:
+      - wallet
+  /wallet/transfer:
+    post:
+      consumes:
+      - application/json
+      description: Transfers a specified amount from one wallet to another
+      parameters:
+      - description: Transfer request
+        in: body
+        name: transferRequest
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Transfer funds between wallets
+      tags:
+      - wallet
+  /wallet/webhook/{provider}:
+    post:
+      consumes:
+      - application/json
+      description: Processes webhook events from any payment provider
+      parameters:
+      - description: Provider code
+        in: path
+        name: provider
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Handle provider webhook
+      tags:
+      - wallet
+  /wallet/withdraw:
+    post:
+      consumes:
+      - application/json
+      description: Withdraws a specified amount from the user's wallet
+      parameters:
+      - description: Withdraw request
+        in: body
+        name: withdrawRequest
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Withdraw funds from a wallet
+      tags:
+      - wallet
 swagger: "2.0"

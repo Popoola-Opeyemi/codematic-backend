@@ -17,12 +17,12 @@ type Tenants struct {
 	env     *Environment
 }
 
-func (a *Tenants) Init(basePath string, env *Environment) error {
-	a.env = env
+func (h *Tenants) Init(basePath string, env *Environment) error {
+	h.env = env
 
 	tenantsRepo := tenants.NewRepository(env.DB.Queries)
 
-	a.service = tenants.NewService(
+	h.service = tenants.NewService(
 		tenantsRepo,
 		env.JWTManager,
 		env.Logger,
@@ -36,13 +36,12 @@ func (a *Tenants) Init(basePath string, env *Environment) error {
 		env.JWTManager,
 		env.CacheManager,
 	))
-	protected.Post("/create", a.Create)
-	protected.Get("/:id", a.GetByID)
-	protected.Get("/slug/:slug", a.GetBySlug)
-	protected.Get("/", a.List)
-	protected.Put("/:id", a.Update)
-	protected.Delete("/:id", a.Delete)
-	// protected.Get("/refresh", a.RefreshToken)
+	protected.Post("/create", h.Create)
+	protected.Get("/:id", h.GetByID)
+	protected.Get("/slug/:slug", h.GetBySlug)
+	protected.Get("/", h.List)
+	protected.Put("/:id", h.Update)
+	protected.Delete("/:id", h.Delete)
 
 	return nil
 
@@ -58,7 +57,7 @@ func (a *Tenants) Init(basePath string, env *Environment) error {
 // @Success      201  {object}  tenants.Tenant
 // @Failure      400  {object}  model.ErrorResponse
 // @Router       /tenant/create [post]
-func (a *Tenants) Create(c *fiber.Ctx) error {
+func (h *Tenants) Create(c *fiber.Ctx) error {
 	var req tenants.CreateTenantRequest
 	if err := c.BodyParser(&req); err != nil {
 		return utils.SendErrorResponse(c, fiber.StatusBadRequest,
@@ -72,9 +71,9 @@ func (a *Tenants) Create(c *fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
-	tenant, err := a.service.CreateTenant(ctx, req)
+	tenant, err := h.service.CreateTenant(ctx, req)
 	if err != nil {
-		a.env.Logger.Error("Failed to signup", zap.Error(err))
+		h.env.Logger.Error("Failed to signup", zap.Error(err))
 		return utils.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
 	}
 
@@ -90,13 +89,13 @@ func (a *Tenants) Create(c *fiber.Ctx) error {
 // @Success      200  {object}  tenants.Tenant
 // @Failure      404  {object}  model.ErrorResponse
 // @Router       /tenant/{id} [get]
-func (a *Tenants) GetByID(c *fiber.Ctx) error {
+func (h *Tenants) GetByID(c *fiber.Ctx) error {
 	id := c.Params("id")
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	tenant, err := a.service.GetTenantByID(ctx, id)
+	tenant, err := h.service.GetTenantByID(ctx, id)
 	if err != nil {
-		a.env.Logger.Error("Failed to get tenant by ID", zap.Error(err))
+		h.env.Logger.Error("Failed to get tenant by ID", zap.Error(err))
 		return utils.SendErrorResponse(c, fiber.StatusNotFound, err.Error())
 	}
 	return utils.SendSuccessResponse(c, fiber.StatusOK, tenant)
@@ -111,13 +110,13 @@ func (a *Tenants) GetByID(c *fiber.Ctx) error {
 // @Success      200  {object}  tenants.Tenant
 // @Failure      404  {object}  model.ErrorResponse
 // @Router       /tenant/slug/{slug} [get]
-func (a *Tenants) GetBySlug(c *fiber.Ctx) error {
+func (h *Tenants) GetBySlug(c *fiber.Ctx) error {
 	slug := c.Params("slug")
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	tenant, err := a.service.GetTenantBySlug(ctx, slug)
+	tenant, err := h.service.GetTenantBySlug(ctx, slug)
 	if err != nil {
-		a.env.Logger.Error("Failed to get tenant by slug", zap.Error(err))
+		h.env.Logger.Error("Failed to get tenant by slug", zap.Error(err))
 		return utils.SendErrorResponse(c, fiber.StatusNotFound, err.Error())
 	}
 	return utils.SendSuccessResponse(c, fiber.StatusOK, tenant)
@@ -130,12 +129,12 @@ func (a *Tenants) GetBySlug(c *fiber.Ctx) error {
 // @Produce      json
 // @Success      200  {array}  tenants.Tenant
 // @Router       /tenant [get]
-func (a *Tenants) List(c *fiber.Ctx) error {
+func (h *Tenants) List(c *fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	tenants, err := a.service.ListTenants(ctx)
+	tenants, err := h.service.ListTenants(ctx)
 	if err != nil {
-		a.env.Logger.Error("Failed to list tenants", zap.Error(err))
+		h.env.Logger.Error("Failed to list tenants", zap.Error(err))
 		return utils.SendErrorResponse(c, fiber.StatusInternalServerError, err.Error())
 	}
 	return utils.SendSuccessResponse(c, fiber.StatusOK, tenants)
@@ -152,7 +151,7 @@ func (a *Tenants) List(c *fiber.Ctx) error {
 // @Success      200  {object}  tenants.Tenant
 // @Failure      400  {object}  model.ErrorResponse
 // @Router       /tenant/{id} [put]
-func (a *Tenants) Update(c *fiber.Ctx) error {
+func (h *Tenants) Update(c *fiber.Ctx) error {
 	id := c.Params("id")
 	var req tenants.CreateTenantRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -163,9 +162,9 @@ func (a *Tenants) Update(c *fiber.Ctx) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	tenant, err := a.service.UpdateTenant(ctx, id, req.Name, req.Slug)
+	tenant, err := h.service.UpdateTenant(ctx, id, req.Name, req.Slug)
 	if err != nil {
-		a.env.Logger.Error("Failed to update tenant", zap.Error(err))
+		h.env.Logger.Error("Failed to update tenant", zap.Error(err))
 		return utils.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
 	}
 	return utils.SendSuccessResponse(c, fiber.StatusOK, tenant)
@@ -180,12 +179,12 @@ func (a *Tenants) Update(c *fiber.Ctx) error {
 // @Success      204  {object}  nil
 // @Failure      400  {object}  model.ErrorResponse
 // @Router       /tenant/{id} [delete]
-func (a *Tenants) Delete(c *fiber.Ctx) error {
+func (h *Tenants) Delete(c *fiber.Ctx) error {
 	id := c.Params("id")
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	if err := a.service.DeleteTenant(ctx, id); err != nil {
-		a.env.Logger.Error("Failed to delete tenant", zap.Error(err))
+	if err := h.service.DeleteTenant(ctx, id); err != nil {
+		h.env.Logger.Error("Failed to delete tenant", zap.Error(err))
 		return utils.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
 	}
 	return c.SendStatus(fiber.StatusNoContent)

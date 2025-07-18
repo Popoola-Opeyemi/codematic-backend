@@ -20,15 +20,15 @@ type Auth struct {
 	env     *Environment
 }
 
-func (a *Auth) Init(basePath string, env *Environment) error {
-	a.env = env
+func (h *Auth) Init(basePath string, env *Environment) error {
+	h.env = env
 
 	userRepo := user.NewRepository(env.DB.Queries)
 	authRepo := auth.NewRepository(env.DB.Queries)
 	tenantRepo := tenants.NewRepository(env.DB.Queries)
 	userService := user.NewService(userRepo, env.JWTManager, env.Logger)
 
-	a.service = auth.NewService(
+	h.service = auth.NewService(
 		userService,
 		authRepo,
 		tenantRepo,
@@ -40,16 +40,16 @@ func (a *Auth) Init(basePath string, env *Environment) error {
 
 	// Public auth routes
 	authGroup := env.Fiber.Group(basePath + "/auth")
-	authGroup.Post("/login", a.Login)
-	authGroup.Post("/signup", a.Signup)
+	authGroup.Post("/login", h.Login)
+	authGroup.Post("/signup", h.Signup)
 
 	// Protected routes group with JWT middleware
 	protected := authGroup.Use(middleware.JWTMiddleware(
 		env.JWTManager,
 		env.CacheManager,
 	))
-	protected.Post("/logout", a.Logout)
-	protected.Post("/refresh", a.RefreshToken)
+	protected.Post("/logout", h.Logout)
+	protected.Post("/refresh", h.RefreshToken)
 
 	return nil
 
@@ -65,7 +65,7 @@ func (a *Auth) Init(basePath string, env *Environment) error {
 // @Success      201  {object}  interface{}
 // @Failure      400  {object}  model.ErrorResponse
 // @Router       /auth/signup [post]
-func (a *Auth) Signup(c *fiber.Ctx) error {
+func (h *Auth) Signup(c *fiber.Ctx) error {
 	var req auth.SignupRequest
 	if err := c.BodyParser(&req); err != nil {
 		return utils.SendErrorResponse(c, fiber.StatusBadRequest,
@@ -83,9 +83,9 @@ func (a *Auth) Signup(c *fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
-	user, err := a.service.Signup(ctx, &req)
+	user, err := h.service.Signup(ctx, &req)
 	if err != nil {
-		a.env.Logger.Error("Failed to signup", zap.Error(err))
+		h.env.Logger.Error("Failed to signup", zap.Error(err))
 		return utils.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
 	}
 
@@ -102,7 +102,7 @@ func (a *Auth) Signup(c *fiber.Ctx) error {
 // @Success      200  {object}  interface{}
 // @Failure      400  {object}  model.ErrorResponse
 // @Router       /auth/login [post]
-func (a *Auth) Login(c *fiber.Ctx) error {
+func (h *Auth) Login(c *fiber.Ctx) error {
 	var req auth.LoginRequest
 	if err := c.BodyParser(&req); err != nil {
 		return utils.SendErrorResponse(c, fiber.StatusBadRequest,
@@ -122,16 +122,16 @@ func (a *Auth) Login(c *fiber.Ctx) error {
 		TokenID:   uuid.New().String(),
 	}
 
-	auth, err := a.service.Login(ctx, &req, sessionInfo)
+	auth, err := h.service.Login(ctx, &req, sessionInfo)
 	if err != nil {
-		a.env.Logger.Error("Failed to login", zap.Error(err))
+		h.env.Logger.Error("Failed to login", zap.Error(err))
 		return utils.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
 	}
 
 	return utils.SendSuccessResponse(c, 200, auth)
 }
 
-func (a *Auth) Logout(c *fiber.Ctx) error {
+func (h *Auth) Logout(c *fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
@@ -140,7 +140,7 @@ func (a *Auth) Logout(c *fiber.Ctx) error {
 		return utils.SendErrorResponse(c, fiber.StatusUnauthorized, "Unauthorized")
 	}
 
-	err := a.service.Logout(ctx, tokenID)
+	err := h.service.Logout(ctx, tokenID)
 	if err != nil {
 		return utils.SendErrorResponse(c, fiber.StatusInternalServerError, "Failed to logout")
 	}
@@ -148,7 +148,7 @@ func (a *Auth) Logout(c *fiber.Ctx) error {
 	return utils.SendSuccessResponse(c, 200, "Logged out successfully")
 }
 
-func (a *Auth) RefreshToken(c *fiber.Ctx) error {
+func (h *Auth) RefreshToken(c *fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
@@ -157,7 +157,7 @@ func (a *Auth) RefreshToken(c *fiber.Ctx) error {
 		return utils.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
 	}
 
-	auth, err := a.service.RefreshToken(ctx, req.RefreshToken)
+	auth, err := h.service.RefreshToken(ctx, req.RefreshToken)
 	if err != nil {
 		return utils.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
 	}

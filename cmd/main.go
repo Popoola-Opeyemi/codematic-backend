@@ -62,6 +62,8 @@ func main() {
 
 	router.InitHandlers(env, []handler.IHandler{
 		&handler.Auth{},
+		&handler.Tenants{},
+		&handler.Wallet{},
 	})
 
 	// Graceful shutdown support

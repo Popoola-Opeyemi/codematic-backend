@@ -300,3 +300,13 @@ func IsValidEmail(email string) bool {
 	var re = regexp.MustCompile(`^[a-zA-Z0-9._%%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 	return re.MatchString(email)
 }
+
+func HashRequestBody(body []byte) string {
+	if len(body) == 0 {
+		return ""
+	}
+
+	hasher := sha256.New()
+	hasher.Write(body)
+	return hex.EncodeToString(hasher.Sum(nil))
+}
