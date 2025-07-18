@@ -318,6 +318,11 @@
 			"key": "API_BASE_URL",
 			"value": "http://localhost:9082/api",
 			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3NjU3MWU5MC1lOTJhLTRhYWEtYWExNC01MWQ2YmMwNDExNmUiLCJlbWFpbCI6InNhbXdpbHNvbkBtYWlsaW5hdG9yLmNvbSIsInRlbmFudF9pZCI6IjVjNWMxNGJiLTQ3ZjUtNDc5Zi1iYTE5LTAxZjMxMWNiZGQ4NyIsImV4cCI6MTc1MzQ2NTI3NSwiaWF0IjoxNzUyODYwNDc1LCJqdGkiOiJiMjg0YWRkMi05NTk5LTRlNWYtYjYwMC0yNDJhYjcxOGFlZTcifQ.lGiFvUQIl0F1iz916_XxM74CRbXdyPNYnToNSCd8Gk0",
+			"type": "default"
 		}
 	]
 }
