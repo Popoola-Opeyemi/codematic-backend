@@ -286,7 +286,41 @@
 					"response": []
 				}
 			],
-			"id": "44470642-39b3b0bd-0d70-4726-ad14-a5354dc5711f"
+			"id": "44470642-39b3b0bd-0d70-4726-ad14-a5354dc5711f",
+			"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+					}
+				]
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"id": "efa6fc6d-1c0e-434d-ad62-6bb69c2d49cf",
+						"type": "text/javascript",
+						"packages": {},
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"id": "f87296a1-800a-4797-ae05-fb98119e7eed",
+						"type": "text/javascript",
+						"packages": {},
+						"exec": [
+							""
+						]
+					}
+				}
+			]
 		}
 	],
 	"event": [
