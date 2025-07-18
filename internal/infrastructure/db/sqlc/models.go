@@ -18,6 +18,15 @@ type AuditLog struct {
 	CreatedAt pgtype.Timestamptz
 }
 
+type Currency struct {
+	Code      string
+	Name      string
+	Symbol    string
+	IsActive  pgtype.Bool
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+}
+
 type IdempotencyKey struct {
 	ID             pgtype.UUID
 	TenantID       pgtype.UUID
@@ -50,19 +59,20 @@ type Tenant struct {
 }
 
 type Transaction struct {
-	ID          pgtype.UUID
-	TenantID    pgtype.UUID
-	WalletID    pgtype.UUID
-	ProviderID  pgtype.UUID
-	Reference   string
-	Type        string
-	Status      string
-	Amount      decimal.Decimal
-	Fee         *decimal.Decimal
-	Metadata    []byte
-	ErrorReason pgtype.Text
-	CreatedAt   pgtype.Timestamptz
-	UpdatedAt   pgtype.Timestamptz
+	ID           pgtype.UUID
+	TenantID     pgtype.UUID
+	WalletID     pgtype.UUID
+	ProviderID   pgtype.UUID
+	CurrencyCode string
+	Reference    string
+	Type         string
+	Status       string
+	Amount       decimal.Decimal
+	Fee          *decimal.Decimal
+	Metadata     []byte
+	ErrorReason  pgtype.Text
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
 }
 
 type Transfer struct {
@@ -104,6 +114,7 @@ type Wallet struct {
 	ID           pgtype.UUID
 	UserID       pgtype.UUID
 	WalletTypeID pgtype.UUID
+	CurrencyCode string
 	Balance      *decimal.Decimal
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz

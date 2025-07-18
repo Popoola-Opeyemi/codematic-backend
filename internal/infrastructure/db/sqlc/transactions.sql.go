@@ -17,7 +17,7 @@ INSERT INTO transactions (
   id, tenant_id, wallet_id, provider_id, reference, type, status, amount, fee, metadata, error_reason, created_at, updated_at
 ) VALUES (
   $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now(), now()
-) RETURNING id, tenant_id, wallet_id, provider_id, reference, type, status, amount, fee, metadata, error_reason, created_at, updated_at
+) RETURNING id, tenant_id, wallet_id, provider_id, currency_code, reference, type, status, amount, fee, metadata, error_reason, created_at, updated_at
 `
 
 type CreateTransactionParams struct {
@@ -54,6 +54,7 @@ func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionPa
 		&i.TenantID,
 		&i.WalletID,
 		&i.ProviderID,
+		&i.CurrencyCode,
 		&i.Reference,
 		&i.Type,
 		&i.Status,
@@ -68,7 +69,7 @@ func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionPa
 }
 
 const listTransactionsByWalletID = `-- name: ListTransactionsByWalletID :many
-SELECT id, tenant_id, wallet_id, provider_id, reference, type, status, amount, fee, metadata, error_reason, created_at, updated_at FROM transactions WHERE wallet_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3
+SELECT id, tenant_id, wallet_id, provider_id, currency_code, reference, type, status, amount, fee, metadata, error_reason, created_at, updated_at FROM transactions WHERE wallet_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3
 `
 
 type ListTransactionsByWalletIDParams struct {
@@ -91,6 +92,7 @@ func (q *Queries) ListTransactionsByWalletID(ctx context.Context, arg ListTransa
 			&i.TenantID,
 			&i.WalletID,
 			&i.ProviderID,
+			&i.CurrencyCode,
 			&i.Reference,
 			&i.Type,
 			&i.Status,

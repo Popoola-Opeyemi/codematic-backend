@@ -9,7 +9,6 @@ import (
 
 type walletService struct {
 	repo Repository
-	// providerRegistry ProviderRegistry // TODO: inject provider abstraction
 }
 
 func NewService(repo Repository /*, other deps */) Service {
@@ -118,7 +117,26 @@ func (s *walletService) Transfer(ctx context.Context, data TransferForm) error {
 	return s.repo.CreateTransaction(ctx, tx)
 }
 
-func (s *walletService) GetBalance(ctx context.Context, walletID string) (decimal.Decimal, error) {
+func (s *walletService) CreateWalletsForUserByCurrencies(ctx context.Context, userID string, currencies []string) ([]*Wallet, error) {
+	return s.repo.CreateWalletsForUserByCurrencies(ctx, userID, currencies)
+}
+
+func (s *walletService) CreateWalletForNewUser(ctx context.Context, userID string) ([]*Wallet, error) {
+	currencies, err := s.repo.ListActiveCurrencyCodes(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.CreateWalletsForUserByCurrencies(ctx, userID, currencies)
+}
+
+func (s *walletService) CreateWallet(ctx context.Context, userID,
+	walletTypeID string, balance decimal.Decimal) (*Wallet, error) {
+	return s.repo.CreateWallet(ctx, userID, walletTypeID, balance)
+}
+
+func (s *walletService) GetBalance(ctx context.Context,
+	walletID string) (decimal.Decimal, error) {
 	wallet, err := s.repo.GetWallet(ctx, walletID)
 	if err != nil {
 		return decimal.Zero, err
@@ -126,6 +144,11 @@ func (s *walletService) GetBalance(ctx context.Context, walletID string) (decima
 	return wallet.Balance, nil
 }
 
-func (s *walletService) GetTransactions(ctx context.Context, walletID string, limit, offset int) ([]Transaction, error) {
+func (s *walletService) GetTransactions(ctx context.Context, walletID string,
+	limit, offset int) ([]Transaction, error) {
 	return s.repo.ListTransactions(ctx, walletID, limit, offset)
+}
+
+func (s *walletService) GetWalletTypeIDByCurrency(ctx context.Context, currency string) (string, error) {
+	return s.repo.GetWalletTypeIDByCurrency(ctx, currency)
 }

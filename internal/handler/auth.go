@@ -4,6 +4,7 @@ import (
 	"codematic/internal/domain/auth"
 	"codematic/internal/domain/tenants"
 	"codematic/internal/domain/user"
+	"codematic/internal/domain/wallet"
 	"codematic/internal/middleware"
 	"codematic/internal/shared/model"
 	"codematic/internal/shared/utils"
@@ -25,12 +26,15 @@ func (h *Auth) Init(basePath string, env *Environment) error {
 
 	userRepo := user.NewRepository(env.DB.Queries)
 	authRepo := auth.NewRepository(env.DB.Queries)
+	walletRepo := wallet.NewRepository(env.DB)
 	tenantRepo := tenants.NewRepository(env.DB.Queries)
 	userService := user.NewService(userRepo, env.JWTManager, env.Logger)
+	walletService := wallet.NewService(walletRepo)
 
 	h.service = auth.NewService(
-		userService,
 		authRepo,
+		userService,
+		walletService,
 		tenantRepo,
 		env.CacheManager,
 		env.JWTManager,

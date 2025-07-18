@@ -12,8 +12,99 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+const createWallet = `-- name: CreateWallet :one
+INSERT INTO wallets (id, user_id, wallet_type_id, balance)
+VALUES ($1, $2, $3, $4)
+RETURNING id, user_id, wallet_type_id, currency_code, balance, created_at, updated_at
+`
+
+type CreateWalletParams struct {
+	ID           pgtype.UUID
+	UserID       pgtype.UUID
+	WalletTypeID pgtype.UUID
+	Balance      *decimal.Decimal
+}
+
+func (q *Queries) CreateWallet(ctx context.Context, arg CreateWalletParams) (Wallet, error) {
+	row := q.db.QueryRow(ctx, createWallet,
+		arg.ID,
+		arg.UserID,
+		arg.WalletTypeID,
+		arg.Balance,
+	)
+	var i Wallet
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.WalletTypeID,
+		&i.CurrencyCode,
+		&i.Balance,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const createWalletWithCurrency = `-- name: CreateWalletWithCurrency :one
+INSERT INTO wallets (id, user_id, wallet_type_id, currency_code, balance)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, user_id, wallet_type_id, currency_code, balance, created_at, updated_at
+`
+
+type CreateWalletWithCurrencyParams struct {
+	ID           pgtype.UUID
+	UserID       pgtype.UUID
+	WalletTypeID pgtype.UUID
+	CurrencyCode string
+	Balance      *decimal.Decimal
+}
+
+func (q *Queries) CreateWalletWithCurrency(ctx context.Context, arg CreateWalletWithCurrencyParams) (Wallet, error) {
+	row := q.db.QueryRow(ctx, createWalletWithCurrency,
+		arg.ID,
+		arg.UserID,
+		arg.WalletTypeID,
+		arg.CurrencyCode,
+		arg.Balance,
+	)
+	var i Wallet
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.WalletTypeID,
+		&i.CurrencyCode,
+		&i.Balance,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const decrementWalletBalance = `-- name: DecrementWalletBalance :exec
+UPDATE wallets SET balance = balance - $1, updated_at = now() WHERE id = $2
+`
+
+type DecrementWalletBalanceParams struct {
+	Balance *decimal.Decimal
+	ID      pgtype.UUID
+}
+
+func (q *Queries) DecrementWalletBalance(ctx context.Context, arg DecrementWalletBalanceParams) error {
+	_, err := q.db.Exec(ctx, decrementWalletBalance, arg.Balance, arg.ID)
+	return err
+}
+
+const deleteWallet = `-- name: DeleteWallet :exec
+DELETE FROM wallets WHERE id = $1
+`
+
+func (q *Queries) DeleteWallet(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteWallet, id)
+	return err
+}
+
 const getWalletByID = `-- name: GetWalletByID :one
-SELECT id, user_id, wallet_type_id, balance, created_at, updated_at FROM wallets WHERE id = $1
+SELECT id, user_id, wallet_type_id, currency_code, balance, created_at, updated_at FROM wallets WHERE id = $1
 `
 
 func (q *Queries) GetWalletByID(ctx context.Context, id pgtype.UUID) (Wallet, error) {
@@ -23,6 +114,7 @@ func (q *Queries) GetWalletByID(ctx context.Context, id pgtype.UUID) (Wallet, er
 		&i.ID,
 		&i.UserID,
 		&i.WalletTypeID,
+		&i.CurrencyCode,
 		&i.Balance,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -30,8 +122,123 @@ func (q *Queries) GetWalletByID(ctx context.Context, id pgtype.UUID) (Wallet, er
 	return i, err
 }
 
+const incrementWalletBalance = `-- name: IncrementWalletBalance :exec
+UPDATE wallets SET balance = balance + $1, updated_at = now() WHERE id = $2
+`
+
+type IncrementWalletBalanceParams struct {
+	Balance *decimal.Decimal
+	ID      pgtype.UUID
+}
+
+func (q *Queries) IncrementWalletBalance(ctx context.Context, arg IncrementWalletBalanceParams) error {
+	_, err := q.db.Exec(ctx, incrementWalletBalance, arg.Balance, arg.ID)
+	return err
+}
+
+const listWalletsByCurrency = `-- name: ListWalletsByCurrency :many
+SELECT id, user_id, wallet_type_id, currency_code, balance, created_at, updated_at FROM wallets WHERE currency_code = $1 ORDER BY created_at DESC
+`
+
+func (q *Queries) ListWalletsByCurrency(ctx context.Context, currencyCode string) ([]Wallet, error) {
+	rows, err := q.db.Query(ctx, listWalletsByCurrency, currencyCode)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Wallet
+	for rows.Next() {
+		var i Wallet
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.WalletTypeID,
+			&i.CurrencyCode,
+			&i.Balance,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWalletsByType = `-- name: ListWalletsByType :many
+SELECT id, user_id, wallet_type_id, currency_code, balance, created_at, updated_at FROM wallets WHERE wallet_type_id = $1 ORDER BY created_at DESC
+`
+
+func (q *Queries) ListWalletsByType(ctx context.Context, walletTypeID pgtype.UUID) ([]Wallet, error) {
+	rows, err := q.db.Query(ctx, listWalletsByType, walletTypeID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Wallet
+	for rows.Next() {
+		var i Wallet
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.WalletTypeID,
+			&i.CurrencyCode,
+			&i.Balance,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWalletsByUserAndCurrency = `-- name: ListWalletsByUserAndCurrency :many
+SELECT id, user_id, wallet_type_id, currency_code, balance, created_at, updated_at FROM wallets WHERE user_id = $1 AND currency_code = $2 ORDER BY created_at DESC
+`
+
+type ListWalletsByUserAndCurrencyParams struct {
+	UserID       pgtype.UUID
+	CurrencyCode string
+}
+
+func (q *Queries) ListWalletsByUserAndCurrency(ctx context.Context, arg ListWalletsByUserAndCurrencyParams) ([]Wallet, error) {
+	rows, err := q.db.Query(ctx, listWalletsByUserAndCurrency, arg.UserID, arg.CurrencyCode)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Wallet
+	for rows.Next() {
+		var i Wallet
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.WalletTypeID,
+			&i.CurrencyCode,
+			&i.Balance,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listWalletsByUserID = `-- name: ListWalletsByUserID :many
-SELECT id, user_id, wallet_type_id, balance, created_at, updated_at FROM wallets WHERE user_id = $1 ORDER BY created_at DESC
+SELECT id, user_id, wallet_type_id, currency_code, balance, created_at, updated_at FROM wallets WHERE user_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) ListWalletsByUserID(ctx context.Context, userID pgtype.UUID) ([]Wallet, error) {
@@ -47,6 +254,7 @@ func (q *Queries) ListWalletsByUserID(ctx context.Context, userID pgtype.UUID) (
 			&i.ID,
 			&i.UserID,
 			&i.WalletTypeID,
+			&i.CurrencyCode,
 			&i.Balance,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -72,5 +280,19 @@ type UpdateWalletBalanceParams struct {
 
 func (q *Queries) UpdateWalletBalance(ctx context.Context, arg UpdateWalletBalanceParams) error {
 	_, err := q.db.Exec(ctx, updateWalletBalance, arg.Balance, arg.ID)
+	return err
+}
+
+const updateWalletType = `-- name: UpdateWalletType :exec
+UPDATE wallets SET wallet_type_id = $1, updated_at = now() WHERE id = $2
+`
+
+type UpdateWalletTypeParams struct {
+	WalletTypeID pgtype.UUID
+	ID           pgtype.UUID
+}
+
+func (q *Queries) UpdateWalletType(ctx context.Context, arg UpdateWalletTypeParams) error {
+	_, err := q.db.Exec(ctx, updateWalletType, arg.WalletTypeID, arg.ID)
 	return err
 }

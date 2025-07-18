@@ -13,6 +13,10 @@ type Service interface {
 	GetBalance(ctx context.Context, walletID string) (decimal.Decimal, error)
 	GetTransactions(ctx context.Context, walletID string,
 		limit, offset int) ([]Transaction, error)
+	CreateWallet(ctx context.Context, userID string, walletTypeID string,
+		balance decimal.Decimal) (*Wallet, error)
+	GetWalletTypeIDByCurrency(ctx context.Context, currency string) (string, error)
+	CreateWalletsForUserByCurrencies(ctx context.Context, userID string, currencies []string) ([]*Wallet, error)
 }
 
 type Repository interface {
@@ -22,4 +26,9 @@ type Repository interface {
 	CreateTransaction(ctx context.Context, tx *Transaction) error
 	ListTransactions(ctx context.Context, walletID string, limit,
 		offset int) ([]Transaction, error)
+	CreateWallet(ctx context.Context, userID string, walletTypeID string,
+		balance decimal.Decimal) (*Wallet, error)
+	GetWalletTypeIDByCurrency(ctx context.Context, currency string) (string, error)
+	CreateWalletsForUserByCurrencies(ctx context.Context, userID string, currencies []string) ([]*Wallet, error)
+	ListActiveCurrencyCodes(ctx context.Context) ([]string, error)
 }

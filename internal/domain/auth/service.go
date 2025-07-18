@@ -4,6 +4,7 @@ import (
 	"codematic/internal/config"
 	"codematic/internal/domain/tenants"
 	"codematic/internal/domain/user"
+	"codematic/internal/domain/wallet"
 	"codematic/internal/infrastructure/cache"
 	"codematic/internal/shared/model"
 	"codematic/internal/shared/utils"
@@ -17,18 +18,20 @@ import (
 )
 
 type authService struct {
-	userService  user.Service
-	authRepo     Repository
-	tenantRepo   tenants.Repository
-	cacheManager cache.CacheManager
-	JwtManager   *utils.JWTManager
-	cfg          *config.Config
-	logger       *zap.Logger
+	authRepo      Repository
+	userService   user.Service
+	walletService wallet.Service
+	tenantRepo    tenants.Repository
+	cacheManager  cache.CacheManager
+	JwtManager    *utils.JWTManager
+	cfg           *config.Config
+	logger        *zap.Logger
 }
 
 func NewService(
-	userService user.Service,
 	authRepo Repository,
+	userService user.Service,
+	walletService wallet.Service,
 	tenantRepo tenants.Repository,
 	cacheManager cache.CacheManager,
 	jwtManager *utils.JWTManager,
@@ -63,6 +66,23 @@ func (s *authService) Signup(ctx context.Context, req *SignupRequest) (User, err
 	if err != nil {
 		return User{}, err
 	}
+
+	// // Hardcoded wallet type UUIDs (replace with actual values from your DB)
+	// ngnWalletTypeID := "00000000-0000-0000-0000-000000000001"
+	// usdWalletTypeID := "00000000-0000-0000-0000-000000000002"
+	// gbpWalletTypeID := "00000000-0000-0000-0000-000000000003"
+
+	// walletService, ok := s.userService.(interface {
+	// 	CreateWallet(ctx context.Context, userID string, walletTypeID string, balance decimal.Decimal) (*wallet.Wallet, error)
+	// })
+	// if !ok {
+	// 	return User{}, errors.New("wallet service not available")
+	// }
+
+	// zero := decimal.NewFromInt(0)
+	// _, _ = walletService.CreateWallet(ctx, created.ID.String(), ngnWalletTypeID, zero)
+	// _, _ = walletService.CreateWallet(ctx, created.ID.String(), usdWalletTypeID, zero)
+	// _, _ = walletService.CreateWallet(ctx, created.ID.String(), gbpWalletTypeID, zero)
 
 	return User{
 		ID:        created.ID.String(),

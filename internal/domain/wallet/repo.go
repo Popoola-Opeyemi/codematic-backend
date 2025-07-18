@@ -1,23 +1,28 @@
 package wallet
 
 import (
-	db "codematic/internal/infrastructure/db/sqlc"
+	"codematic/internal/infrastructure/db"
+	dbsqlc "codematic/internal/infrastructure/db/sqlc"
 	"codematic/internal/shared/utils"
 	"context"
+
 	"encoding/json"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
 )
 
 type walletRepository struct {
-	q *db.Queries
+	q *dbsqlc.Queries
+	p *pgxpool.Pool
 }
 
-func NewRepository(q *db.Queries) Repository {
+func NewRepository(db *db.DBConn) Repository {
 	return &walletRepository{
-		q: q,
+		q: db.Queries,
+		p: db.Pool,
 	}
 }
 
@@ -45,10 +50,42 @@ func (r *walletRepository) UpdateWalletBalance(ctx context.Context,
 	if err != nil {
 		return err
 	}
-	return r.q.UpdateWalletBalance(ctx, db.UpdateWalletBalanceParams{
+	return r.q.UpdateWalletBalance(ctx, dbsqlc.UpdateWalletBalanceParams{
 		Balance: &amount,
 		ID:      pgtype.UUID{Bytes: [16]byte(uid), Valid: true},
 	})
+}
+
+func (r *walletRepository) CreateWallet(ctx context.Context, userID string,
+	walletTypeID string, balance decimal.Decimal) (*Wallet, error) {
+	uid, err := uuid.NewRandom()
+	if err != nil {
+		return nil, err
+	}
+	userUUID, err := utils.StringToPgUUID(userID)
+	if err != nil {
+		return nil, err
+	}
+	walletTypeUUID, err := utils.StringToPgUUID(walletTypeID)
+	if err != nil {
+		return nil, err
+	}
+	w, err := r.q.CreateWallet(ctx, dbsqlc.CreateWalletParams{
+		ID:           pgtype.UUID{Bytes: [16]byte(uid), Valid: true},
+		UserID:       userUUID,
+		WalletTypeID: walletTypeUUID,
+		Balance:      &balance,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &Wallet{
+		ID:        w.ID.String(),
+		UserID:    w.UserID.String(),
+		Balance:   *w.Balance,
+		CreatedAt: w.CreatedAt.Time,
+		UpdatedAt: w.UpdatedAt.Time,
+	}, nil
 }
 
 func (r *walletRepository) CreateTransaction(ctx context.Context, tx *Transaction) error {
@@ -58,7 +95,7 @@ func (r *walletRepository) CreateTransaction(ctx context.Context, tx *Transactio
 	meta, _ := json.Marshal(tx.Metadata)
 
 	fee := &tx.Fee
-	_, err := r.q.CreateTransaction(ctx, db.CreateTransactionParams{
+	_, err := r.q.CreateTransaction(ctx, dbsqlc.CreateTransactionParams{
 		ID:          uid,
 		TenantID:    pgtype.UUID{}, // TODO: set tenant id
 		WalletID:    wid,
@@ -80,7 +117,7 @@ func (r *walletRepository) ListTransactions(ctx context.Context,
 	wid, _ := utils.StringToPgUUID(walletID)
 
 	rows, err := r.q.ListTransactionsByWalletID(ctx,
-		db.ListTransactionsByWalletIDParams{
+		dbsqlc.ListTransactionsByWalletIDParams{
 			WalletID: wid,
 			Limit:    int32(limit),
 			Offset:   int32(offset),
@@ -116,4 +153,46 @@ func (r *walletRepository) ListTransactions(ctx context.Context,
 		})
 	}
 	return txs, nil
+}
+
+func (r *walletRepository) GetWalletTypeIDByCurrency(ctx context.Context, currency string) (string, error) {
+	var id uuid.UUID
+	row := r.p.QueryRow(ctx, "SELECT id FROM wallet_types WHERE currency = $1 LIMIT 1", currency)
+	if err := row.Scan(&id); err != nil {
+		return "", err
+	}
+	return id.String(), nil
+}
+
+func (r *walletRepository) CreateWalletsForUserByCurrencies(ctx context.Context, userID string, currencies []string) ([]*Wallet, error) {
+	var wallets []*Wallet
+	for _, currency := range currencies {
+		walletTypeID, err := r.GetWalletTypeIDByCurrency(ctx, currency)
+		if err != nil {
+			return nil, err
+		}
+		w, err := r.CreateWallet(ctx, userID, walletTypeID, decimal.NewFromInt(0))
+		if err != nil {
+			return nil, err
+		}
+		wallets = append(wallets, w)
+	}
+	return wallets, nil
+}
+
+func (r *walletRepository) ListActiveCurrencyCodes(ctx context.Context) ([]string, error) {
+	rows, err := r.p.Query(ctx, "SELECT code FROM currencies WHERE is_active = true")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var codes []string
+	for rows.Next() {
+		var code string
+		if err := rows.Scan(&code); err != nil {
+			return nil, err
+		}
+		codes = append(codes, code)
+	}
+	return codes, nil
 }
