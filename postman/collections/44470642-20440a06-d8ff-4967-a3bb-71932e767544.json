@@ -75,7 +75,104 @@
 		},
 		{
 			"name": "wallet",
-			"item": [],
+			"item": [
+				{
+					"name": "deposit",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{jwt}}", "type": "text"},
+							{"key": "Idempotency-Key", "value": "unique-key-1", "type": "text"},
+							{"key": "X-Tenant-ID", "value": "{{tenant_id}}", "type": "text"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"amount\": \"100.00\",\n  \"provider\": \"paystack\",\n  \"metadata\": {}\n}"
+						},
+						"url": {"raw": "{{API_BASE_URL}}/wallet/deposit", "host": ["{{API_BASE_URL}}"], "path": ["wallet", "deposit"]}
+					},
+					"response": []
+				},
+				{
+					"name": "withdraw",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{jwt}}", "type": "text"},
+							{"key": "Idempotency-Key", "value": "unique-key-2", "type": "text"},
+							{"key": "X-Tenant-ID", "value": "{{tenant_id}}", "type": "text"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"amount\": \"50.00\",\n  \"provider\": \"flutterwave\",\n  \"metadata\": {}\n}"
+						},
+						"url": {"raw": "{{API_BASE_URL}}/wallet/withdraw", "host": ["{{API_BASE_URL}}"], "path": ["wallet", "withdraw"]}
+					},
+					"response": []
+				},
+				{
+					"name": "transfer",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{jwt}}", "type": "text"},
+							{"key": "Idempotency-Key", "value": "unique-key-3", "type": "text"},
+							{"key": "X-Tenant-ID", "value": "{{tenant_id}}", "type": "text"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"from_wallet_id\": \"{{wallet_id}}\",\n  \"to_wallet_id\": \"{{other_wallet_id}}\",\n  \"amount\": \"10.00\",\n  \"metadata\": {}\n}"
+						},
+						"url": {"raw": "{{API_BASE_URL}}/wallet/transfer", "host": ["{{API_BASE_URL}}"], "path": ["wallet", "transfer"]}
+					},
+					"response": []
+				},
+				{
+					"name": "get-balance",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{jwt}}", "type": "text"},
+							{"key": "X-Tenant-ID", "value": "{{tenant_id}}", "type": "text"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"wallet_id\": \"{{wallet_id}}\"\n}"
+						},
+						"url": {"raw": "{{API_BASE_URL}}/wallet/get-balance", "host": ["{{API_BASE_URL}}"], "path": ["wallet", "get-balance"]}
+					},
+					"response": []
+				},
+				{
+					"name": "get-transactions",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{jwt}}", "type": "text"},
+							{"key": "X-Tenant-ID", "value": "{{tenant_id}}", "type": "text"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"limit\": 20,\n  \"offset\": 0\n}"
+						},
+						"url": {"raw": "{{API_BASE_URL}}/wallet/get-transactions", "host": ["{{API_BASE_URL}}"], "path": ["wallet", "get-transactions"]}
+					},
+					"response": []
+				},
+				{
+					"name": "webhook (provider callback)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"event\": \"charge.success\",\n  \"data\": {}\n}"
+						},
+						"url": {"raw": "{{API_BASE_URL}}/wallet/webhook/paystack", "host": ["{{API_BASE_URL}}"], "path": ["wallet", "webhook", "paystack"]}
+					},
+					"response": []
+				}
+			],
 			"id": "44470642-39b3b0bd-0d70-4726-ad14-a5354dc5711f"
 		}
 	],
