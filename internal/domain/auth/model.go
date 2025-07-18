@@ -7,12 +7,16 @@ type (
 		TenantID string `json:"tenant_id" validate:"required"`
 	}
 
-	LoginResponse struct {
+	JwtAuthData struct {
 		AccessToken  string `json:"access_token"`
 		RefreshToken string `json:"refresh_token"`
 		ExpiresIn    int    `json:"expires_in"`
 		TokenType    string `json:"token_type"`
-		User         User   `json:"user"`
+	}
+
+	LoginResponse struct {
+		Auth JwtAuthData `json:"auth"`
+		User User        `json:"user"`
 	}
 
 	User struct {
@@ -33,7 +37,8 @@ type (
 		TenantID  string `json:"tenant_id" validate:"required"`
 	}
 
-	SignupResponse struct {
+	RefreshTokenRequest struct {
+		RefreshToken string `json:"refresh_token"`
 	}
 )
 

@@ -10,6 +10,7 @@ type Service interface {
 	Login(ctx context.Context, req *LoginRequest,
 		sessionInfo model.UserSessionInfo) (interface{}, error)
 	Logout(ctx context.Context, userId string) error
+	RefreshToken(ctx context.Context, refreshToken string) (JwtAuthData, error)
 }
 
 type Repository interface {

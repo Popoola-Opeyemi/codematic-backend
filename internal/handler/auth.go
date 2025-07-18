@@ -49,7 +49,7 @@ func (a *Auth) Init(basePath string, env *Environment) error {
 		env.CacheManager,
 	))
 	protected.Post("/logout", a.Logout)
-	// protected.Post("/refresh", a.RefreshToken)
+	protected.Post("/refresh", a.RefreshToken)
 
 	return nil
 
@@ -148,20 +148,20 @@ func (a *Auth) Logout(c *fiber.Ctx) error {
 	return utils.SendSuccessResponse(c, 200, "Logged out successfully")
 }
 
-// func (a *Auth) RefreshToken(c *fiber.Ctx) error {
-// 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-// 	defer cancel()
+func (a *Auth) RefreshToken(c *fiber.Ctx) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
 
-// 	req := auth.RefreshTokenRequest{}
-// 	if err := c.BodyParser(&req); err != nil {
-// 		return utils.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
-// 	}
+	req := auth.RefreshTokenRequest{}
+	if err := c.BodyParser(&req); err != nil {
+		return utils.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
+	}
 
-// 	auth, err := a.service.RefreshToken(ctx, req.RefreshToken)
-// 	if err != nil {
-// 		return utils.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
-// 	}
+	auth, err := a.service.RefreshToken(ctx, req.RefreshToken)
+	if err != nil {
+		return utils.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
+	}
 
-// 	return utils.SendSuccessResponse(c, 200, auth)
+	return utils.SendSuccessResponse(c, 200, auth)
 
-// }
+}

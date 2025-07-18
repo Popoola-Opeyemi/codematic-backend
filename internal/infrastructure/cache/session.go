@@ -11,9 +11,11 @@ import (
 )
 
 type SessionStore interface {
-	SetSession(ctx context.Context, key string, value *model.UserSessionInfo, ttl time.Duration) error
+	SetSession(ctx context.Context, key string, value *model.UserSessionInfo,
+		ttl time.Duration) error
 	GetSession(ctx context.Context, key string) (*model.UserSessionInfo, error)
 	DeleteSession(ctx context.Context, key string) error
+	GetTokenIDForUser(ctx context.Context, userID string) (string, error)
 }
 
 type RedisSessionStore struct {
@@ -25,7 +27,9 @@ func NewRedisSessionStore(client *redis.Client, logger *zap.Logger) SessionStore
 	return &RedisSessionStore{client: client, logger: logger}
 }
 
-func (r *RedisSessionStore) SetSession(ctx context.Context, key string, value *model.UserSessionInfo, ttl time.Duration) error {
+func (r *RedisSessionStore) SetSession(ctx context.Context, key string,
+	value *model.UserSessionInfo, ttl time.Duration) error {
+
 	data, err := json.Marshal(value)
 	if err != nil {
 		r.logger.Error("Failed to marshal session data", zap.Error(err))
@@ -35,10 +39,19 @@ func (r *RedisSessionStore) SetSession(ctx context.Context, key string, value *m
 		r.logger.Error("Failed to set session in redis", zap.Error(err))
 	}
 
+	if value != nil && value.UserID != "" && value.TokenID != "" {
+		userTokenKey := "user_token:" + value.UserID
+		err := r.client.Set(ctx, userTokenKey, value.TokenID, ttl).Err()
+		if err != nil {
+			r.logger.Error("Failed to set user_token mapping in redis", zap.Error(err))
+		}
+	}
+
 	return nil
 }
 
-func (r *RedisSessionStore) GetSession(ctx context.Context, key string) (*model.UserSessionInfo, error) {
+func (r *RedisSessionStore) GetSession(ctx context.Context, key string) (
+	*model.UserSessionInfo, error) {
 	data, err := r.client.Get(ctx, key).Result()
 	if err != nil {
 		if err == redis.Nil {
@@ -64,4 +77,22 @@ func (r *RedisSessionStore) DeleteSession(ctx context.Context, key string) error
 		r.logger.Error("Failed to delete session from redis", zap.Error(err), zap.String("key", key))
 	}
 	return err
+}
+
+func (r *RedisSessionStore) GetTokenIDForUser(ctx context.Context,
+	userID string) (string, error) {
+	userTokenKey := "user_token:" + userID
+	tokenID, err := r.client.Get(ctx, userTokenKey).Result()
+
+	if err != nil {
+		if err == redis.Nil {
+			r.logger.Debug("User token mapping not found in redis",
+				zap.String("userID", userID))
+			return "", nil
+		}
+		r.logger.Error("Failed to get user_token mapping from redis",
+			zap.Error(err), zap.String("userID", userID))
+		return "", err
+	}
+	return tokenID, nil
 }

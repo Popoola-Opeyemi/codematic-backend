@@ -88,6 +88,15 @@ func (s *authService) Login(ctx context.Context, req *LoginRequest,
 		return nil, errors.New(model.InvalidCredentials)
 	}
 
+	// Check for existing session info for this user
+	existingTokenID, err := s.cacheManager.GetTokenIDForUser(ctx, user.ID.String())
+	var session *model.UserSessionInfo
+	if err == nil && existingTokenID != "" {
+		session, _ = s.cacheManager.GetSession(ctx, existingTokenID)
+		_ = s.cacheManager.DeleteSession(ctx, existingTokenID)
+	}
+
+	// Always generate new tokens and session info
 	tokenID := uuid.New().String()
 	jwtData := model.JWTData{
 		UserID:   user.ID.String(),
@@ -95,6 +104,7 @@ func (s *authService) Login(ctx context.Context, req *LoginRequest,
 		TenantID: user.TenantID.String(),
 		TokenID:  tokenID,
 	}
+
 	jwt, err := s.JwtManager.GenerateJWT(jwtData)
 	if err != nil {
 		return nil, errors.New("failed to generate token")
@@ -105,13 +115,31 @@ func (s *authService) Login(ctx context.Context, req *LoginRequest,
 		return nil, errors.New("failed to generate refresh token")
 	}
 
-	s.cacheManager.SetSession(ctx, tokenID, &sessionInfo, 24*time.Hour)
+	var sessionToStore model.UserSessionInfo
+	if session != nil {
+		sessionToStore = *session
+		sessionToStore.TokenID = tokenID
+		sessionToStore.LoginTime = time.Now()
+		sessionToStore.LastSeen = time.Now()
+		sessionToStore.IsActive = true
+	} else {
+		sessionToStore = sessionInfo
+		sessionToStore.UserID = user.ID.String()
+		sessionToStore.TokenID = tokenID
+		sessionToStore.LoginTime = time.Now()
+		sessionToStore.LastSeen = time.Now()
+		sessionToStore.IsActive = true
+	}
+
+	s.cacheManager.SetSession(ctx, tokenID, &sessionToStore, utils.SessionExpiry)
 
 	return LoginResponse{
-		AccessToken:  jwt,
-		RefreshToken: refresh,
-		ExpiresIn:    86400,
-		TokenType:    "Bearer",
+		Auth: JwtAuthData{
+			AccessToken:  jwt,
+			RefreshToken: refresh,
+			ExpiresIn:    int(utils.SessionExpiry.Seconds()),
+			TokenType:    "Bearer",
+		},
 		User: User{
 			ID:        user.ID.String(),
 			Email:     user.Email,
@@ -123,10 +151,10 @@ func (s *authService) Login(ctx context.Context, req *LoginRequest,
 	}, nil
 }
 
-func (s *authService) RefreshToken(ctx context.Context, refreshToken string) (interface{}, error) {
+func (s *authService) RefreshToken(ctx context.Context, refreshToken string) (JwtAuthData, error) {
 	claims, err := s.JwtManager.VerifyRefreshToken(refreshToken)
 	if err != nil {
-		return nil, errors.New("invalid or expired refresh token")
+		return JwtAuthData{}, errors.New("invalid or expired refresh token")
 	}
 
 	jwtData := model.JWTData{
@@ -138,20 +166,21 @@ func (s *authService) RefreshToken(ctx context.Context, refreshToken string) (in
 
 	jwt, err := s.JwtManager.GenerateJWT(jwtData)
 	if err != nil {
-		return nil, errors.New("failed to generate token")
+		return JwtAuthData{}, errors.New("failed to generate token")
 	}
 
 	refresh, err := s.JwtManager.GenerateRefreshToken(jwtData)
 	if err != nil {
-		return nil, errors.New("failed to generate refresh token")
+		return JwtAuthData{}, errors.New("failed to generate refresh token")
 	}
 
-	return map[string]interface{}{
-		"access_token":  jwt,
-		"refresh_token": refresh,
-		"expires_in":    86400,
-		"token_type":    "Bearer",
+	return JwtAuthData{
+		AccessToken:  jwt,
+		RefreshToken: refresh,
+		ExpiresIn:    int(utils.SessionExpiry.Seconds()),
+		TokenType:    "Bearer",
 	}, nil
+
 }
 
 func (s *authService) Logout(ctx context.Context, userId string) error {

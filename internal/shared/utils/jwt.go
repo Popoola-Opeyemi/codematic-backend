@@ -20,6 +20,8 @@ func NewJWTManager(jwtSecret, refreshTokenSecret string) *JWTManager {
 	}
 }
 
+const SessionExpiry = 7 * 24 * time.Hour // 7 days
+
 func (j *JWTManager) GenerateJWT(data model.JWTData) (string, error) {
 	claims := model.Claims{
 		UserID:   data.UserID,
@@ -28,7 +30,7 @@ func (j *JWTManager) GenerateJWT(data model.JWTData) (string, error) {
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   data.UserID,
 			ID:        data.TokenID,
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(SessionExpiry)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
@@ -45,7 +47,7 @@ func (j *JWTManager) GenerateRefreshToken(data model.JWTData) (string, error) {
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   data.UserID,
 			ID:        data.TokenID,
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(SessionExpiry)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
