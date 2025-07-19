@@ -55,3 +55,10 @@ SELECT id
 FROM wallet_types
 WHERE currency = $1
 LIMIT 1;
+
+-- name: GetWalletByUserAndCurrency :one
+SELECT w.*
+FROM wallets w
+JOIN wallet_types wt ON w.wallet_type_id = wt.id
+WHERE w.user_id = $1 AND wt.currency = $2
+LIMIT 1;

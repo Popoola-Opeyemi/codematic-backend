@@ -86,6 +86,45 @@ INSERT INTO wallet_types (id, name, currency, description) VALUES
   ('ac18e3c9-dfc3-4d2a-a8a9-cf95a0359346', 'Dollar Wallet', 'USD', 'Wallet for United States Dollar'),
   ('ca10450e-40f1-41d2-af19-23f3dcd9d5a8', 'Pound Wallet', 'GBP', 'Wallet for British Pound');
 
+INSERT INTO providers (id, name, code, config, is_active)
+VALUES
+  (
+    gen_random_uuid(),
+    'Paystack',
+    'paystack',
+    '{
+      "base_url": "https://api.paystack.co",
+      "secret_key": "sk_test_6d247fc20f3e89b2702be48d926bbd86d4e7239b",
+      "public_key": "pk_test_008b51881a11a8b7c5ae04a548e0c0b65328153b",
+      "webhook_secret": "PAYSTACK_WEBHOOK_SECRET"
+    }'::jsonb,
+    true
+  ),
+  (
+    gen_random_uuid(),
+    'Flutterwave',
+    'flutterwave',
+    '{
+      "base_url": "https://api.flutterwave.com/v3",
+      "secret_key": "FLWSECK_TEST-b77bfdd76bd39ab9bd9edc4fd33f6154-X",
+      "public_key": "FLWPUBK_TEST-a52a0b9da395cbab3ad412b40cc608c5-X",
+      "webhook_secret": "FLUTTERWAVE_WEBHOOK_SECRET",
+      "encryption_key":"FLWSECK_TESTa320cb3aefe7"
+    }'::jsonb,
+    true
+  ),
+  (
+    gen_random_uuid(),
+    'Stripe',
+    'stripe',
+    '{
+      "base_url": "https://api.stripe.com",
+      "secret_key": "STRIPE_SECRET_KEY",
+      "webhook_secret": "STRIPE_WEBHOOK_SECRET"
+    }'::jsonb,
+    true
+  );
+
 -- +goose statementend
 
 
