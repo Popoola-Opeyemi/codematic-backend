@@ -15,8 +15,11 @@ import (
 	"codematic/internal/handler"
 	"codematic/internal/infrastructure/cache"
 	"codematic/internal/infrastructure/db"
+	"codematic/internal/infrastructure/events"
+	"codematic/internal/infrastructure/events/kafka"
 	"codematic/internal/router"
 	"codematic/internal/shared/model"
+
 	"codematic/internal/shared/utils"
 	"os"
 	"os/signal"
@@ -43,6 +46,12 @@ func main() {
 	cacheManager := cache.NewRedisCacheManager(
 		redisCache,
 	)
+
+	// setup for Kafka
+	broker := os.Getenv("KAFKA_BROKER")
+	kafkaProducer := kafka.NewKafkaProducer(broker)
+	events.Init(kafkaProducer)
+	kafka.StartTokenPriceConsumer(broker)
 
 	// App environment
 	app := router.InitRouterWithConfig(cfg, redisCache, zapLogger.Logger)
