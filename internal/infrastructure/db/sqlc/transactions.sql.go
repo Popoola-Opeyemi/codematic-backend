@@ -29,7 +29,7 @@ type CreateTransactionParams struct {
 	Type        string
 	Status      string
 	Amount      decimal.Decimal
-	Fee         *decimal.Decimal
+	Fee         decimal.Decimal
 	Metadata    []byte
 	ErrorReason pgtype.Text
 }

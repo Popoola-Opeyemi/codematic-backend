@@ -20,10 +20,8 @@ type Tenants struct {
 func (h *Tenants) Init(basePath string, env *Environment) error {
 	h.env = env
 
-	tenantsRepo := tenants.NewRepository(env.DB.Queries)
-
 	h.service = tenants.NewService(
-		tenantsRepo,
+		env.DB,
 		env.JWTManager,
 		env.Logger,
 	)
@@ -74,7 +72,7 @@ func (h *Tenants) Create(c *fiber.Ctx) error {
 
 	tenant, err := h.service.CreateTenant(ctx, req)
 	if err != nil {
-		h.env.Logger.Error("Failed to signup", zap.Error(err))
+		h.env.Logger.Error("Failed to Create tenant", zap.Error(err))
 		return utils.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
 	}
 

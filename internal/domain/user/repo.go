@@ -4,14 +4,24 @@ import (
 	db "codematic/internal/infrastructure/db/sqlc"
 	"codematic/internal/shared/utils"
 	"context"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type userRepository struct {
 	q *db.Queries
+	p *pgxpool.Pool
 }
 
-func NewRepository(q *db.Queries) Repository {
-	return &userRepository{q: q}
+func NewRepository(q *db.Queries, pool *pgxpool.Pool) Repository {
+	return &userRepository{
+		q: q,
+		p: pool,
+	}
+}
+
+func (r *userRepository) WithTx(q *db.Queries) Repository {
+	return NewRepository(q, r.p)
 }
 
 func (r *userRepository) GetUserByEmail(ctx context.Context, email string) (db.User, error) {

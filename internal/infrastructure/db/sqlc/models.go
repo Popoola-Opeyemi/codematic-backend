@@ -68,7 +68,7 @@ type Transaction struct {
 	Type         string
 	Status       string
 	Amount       decimal.Decimal
-	Fee          *decimal.Decimal
+	Fee          decimal.Decimal
 	Metadata     []byte
 	ErrorReason  pgtype.Text
 	CreatedAt    pgtype.Timestamptz
@@ -114,8 +114,8 @@ type Wallet struct {
 	ID           pgtype.UUID
 	UserID       pgtype.UUID
 	WalletTypeID pgtype.UUID
-	CurrencyCode string
-	Balance      *decimal.Decimal
+	Balance      decimal.Decimal
+	Status       string
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 }
@@ -124,6 +124,7 @@ type WalletType struct {
 	ID          pgtype.UUID
 	Name        string
 	Currency    string
+	IsActive    pgtype.Bool
 	Description pgtype.Text
 	CreatedAt   pgtype.Timestamptz
 	UpdatedAt   pgtype.Timestamptz

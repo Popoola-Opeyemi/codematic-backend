@@ -6,14 +6,23 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type repository struct {
 	q *db.Queries
+	p *pgxpool.Pool
 }
 
-func NewRepository(q *db.Queries) Repository {
-	return &repository{q: q}
+func NewRepository(q *db.Queries, pool *pgxpool.Pool) Repository {
+	return &repository{
+		q: q,
+		p: pool,
+	}
+}
+
+func (r *repository) WithTx(q *db.Queries) Repository {
+	return NewRepository(q, r.p)
 }
 
 func (r *repository) CreateTenant(ctx context.Context,

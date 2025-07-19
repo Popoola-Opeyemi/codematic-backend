@@ -10,17 +10,28 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
 )
 
 type WalletService struct {
-	DB   *db.DBConn
-	Repo Repository
+	DB     *db.DBConn
+	Repo   Repository
+	logger *zap.Logger
 }
 
-func NewService(db *db.DBConn) Service {
+func NewService(db *db.DBConn, logger *zap.Logger) Service {
 	return &WalletService{
-		DB:   db,
-		Repo: NewRepository(db.Queries, db.Pool),
+		DB:     db,
+		Repo:   NewRepository(db.Queries, db.Pool),
+		logger: logger,
+	}
+}
+
+func (s *WalletService) WithTx(q *dbsqlc.Queries) Service {
+	return &WalletService{
+		DB:     s.DB,
+		Repo:   NewRepository(q, s.DB.Pool),
+		logger: s.logger,
 	}
 }
 
@@ -157,19 +168,16 @@ func (s *WalletService) Transfer(ctx context.Context, data TransferForm) error {
 	})
 }
 
-func (s *WalletService) CreateWalletsForUserByCurrencies(ctx context.Context,
-	userID string, currencies []string) ([]*Wallet, error) {
-
-	return s.Repo.CreateWalletsForUserByCurrencies(ctx, userID, currencies)
-}
-
 func (s *WalletService) CreateWalletForNewUser(ctx context.Context,
 	userID string) ([]*Wallet, error) {
-	currencies, err := s.Repo.ListActiveCurrencyCodes(ctx)
+
+	d, err := s.Repo.CreateWalletsForUserFromAvailableWallets(ctx, userID)
 	if err != nil {
+		s.logger.Sugar().Info("CreateWalletsForUserByCurrencies error occured", err)
 		return nil, err
 	}
-	return s.Repo.CreateWalletsForUserByCurrencies(ctx, userID, currencies)
+
+	return d, nil
 }
 
 func (s *WalletService) CreateWallet(ctx context.Context, userID,

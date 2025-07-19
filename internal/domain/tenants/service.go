@@ -1,30 +1,44 @@
 package tenants
 
 import (
+	"codematic/internal/infrastructure/db"
+	dbsqlc "codematic/internal/infrastructure/db/sqlc"
 	"codematic/internal/shared/utils"
+
 	"context"
 
 	"go.uber.org/zap"
 )
 
 type tenantService struct {
-	repo       Repository
+	DB         *db.DBConn
+	Repo       Repository
 	JwtManager *utils.JWTManager
 	logger     *zap.Logger
 }
 
-func NewService(repo Repository, jwtManager *utils.JWTManager,
+func NewService(db *db.DBConn, jwtManager *utils.JWTManager,
 	logger *zap.Logger) Service {
 	return &tenantService{
-		repo:       repo,
+		DB:         db,
+		Repo:       NewRepository(db.Queries, db.Pool),
 		JwtManager: jwtManager,
 		logger:     logger,
 	}
 }
 
+func (s *tenantService) WithTx(q *dbsqlc.Queries) Service {
+	return &tenantService{
+		DB:         s.DB,
+		Repo:       NewRepository(q, s.DB.Pool),
+		JwtManager: s.JwtManager,
+		logger:     s.logger,
+	}
+}
+
 func (s *tenantService) GetTenantByID(ctx context.Context,
 	id string) (Tenant, error) {
-	dbTenant, err := s.repo.GetTenantByID(ctx, id)
+	dbTenant, err := s.Repo.GetTenantByID(ctx, id)
 	if err != nil {
 		return Tenant{}, err
 	}
@@ -33,7 +47,7 @@ func (s *tenantService) GetTenantByID(ctx context.Context,
 
 func (s *tenantService) CreateTenant(ctx context.Context,
 	req CreateTenantRequest) (Tenant, error) {
-	dbTenant, err := s.repo.CreateTenant(ctx, req.Name, req.Slug)
+	dbTenant, err := s.Repo.CreateTenant(ctx, req.Name, req.Slug)
 	if err != nil {
 		return Tenant{}, err
 	}
@@ -41,7 +55,7 @@ func (s *tenantService) CreateTenant(ctx context.Context,
 }
 
 func (s *tenantService) ListTenants(ctx context.Context) ([]Tenant, error) {
-	dbTenants, err := s.repo.ListTenants(ctx)
+	dbTenants, err := s.Repo.ListTenants(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +64,7 @@ func (s *tenantService) ListTenants(ctx context.Context) ([]Tenant, error) {
 
 func (s *tenantService) GetTenantBySlug(ctx context.Context,
 	slug string) (Tenant, error) {
-	dbTenant, err := s.repo.GetTenantBySlug(ctx, slug)
+	dbTenant, err := s.Repo.GetTenantBySlug(ctx, slug)
 	if err != nil {
 		return Tenant{}, err
 	}
@@ -59,7 +73,7 @@ func (s *tenantService) GetTenantBySlug(ctx context.Context,
 
 func (s *tenantService) UpdateTenant(ctx context.Context,
 	id, name, slug string) (Tenant, error) {
-	dbTenant, err := s.repo.UpdateTenant(ctx, id, name, slug)
+	dbTenant, err := s.Repo.UpdateTenant(ctx, id, name, slug)
 	if err != nil {
 		return Tenant{}, err
 	}
@@ -67,5 +81,5 @@ func (s *tenantService) UpdateTenant(ctx context.Context,
 }
 
 func (s *tenantService) DeleteTenant(ctx context.Context, id string) error {
-	return s.repo.DeleteTenant(ctx, id)
+	return s.Repo.DeleteTenant(ctx, id)
 }

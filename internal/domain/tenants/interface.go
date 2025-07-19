@@ -12,6 +12,7 @@ type Service interface {
 	GetTenantBySlug(ctx context.Context, slug string) (Tenant, error)
 	UpdateTenant(ctx context.Context, id, name, slug string) (Tenant, error)
 	DeleteTenant(ctx context.Context, id string) error
+	WithTx(q *db.Queries) Service
 }
 
 type Repository interface {
@@ -21,4 +22,5 @@ type Repository interface {
 	GetTenantBySlug(ctx context.Context, slug string) (db.Tenant, error)
 	UpdateTenant(ctx context.Context, id, name, slug string) (db.Tenant, error)
 	DeleteTenant(ctx context.Context, id string) error
+	WithTx(q *db.Queries) Repository
 }

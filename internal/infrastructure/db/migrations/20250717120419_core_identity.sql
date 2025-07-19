@@ -1,55 +1,36 @@
--- +goose up
--- +goose statementbegin
+-- +goose Up
+-- +goose StatementBegin
 
-create table "tenants" (
-  "id" uuid primary key,
-  "name" varchar not null,
-  "slug" varchar unique not null,
-  "created_at" timestamp with time zone default now() not null,
-  "updated_at" timestamp with time zone default now() not null
+CREATE TABLE "tenants" (
+  "id" UUID PRIMARY KEY,
+  "name" VARCHAR NOT NULL,
+  "slug" VARCHAR UNIQUE NOT NULL,
+  "created_at" TIMESTAMPTZ DEFAULT now() NOT NULL,
+  "updated_at" TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
-create table "users" (
-  "id" uuid primary key,
-  "tenant_id" uuid not null references tenants(id) on delete cascade,
-  "email" varchar unique not null,
-  "phone" varchar,
-  "password_hash" varchar not null,
-  "is_active" boolean default true,
-  "created_at" timestamp with time zone default now() not null,
-  "updated_at" timestamp with time zone default now() not null
+CREATE TABLE "users" (
+  "id" UUID PRIMARY KEY,
+  "tenant_id" UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  "email" VARCHAR UNIQUE NOT NULL,
+  "phone" VARCHAR,
+  "password_hash" VARCHAR NOT NULL,
+  "is_active" BOOLEAN DEFAULT true,
+  "created_at" TIMESTAMPTZ DEFAULT now() NOT NULL,
+  "updated_at" TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
-create table "wallet_types" (
-  "id" uuid primary key,
-  "name" varchar not null,
-  "currency" varchar not null, -- usd, naira, gbp
-  "description" varchar,
-  "created_at" timestamp with time zone default now() not null,
-  "updated_at" timestamp with time zone default now() not null
-);
-
-insert into "tenants" ("id", "name", "slug")
-values
+INSERT INTO tenants (id, name, slug) VALUES
   ('5c5c14bb-47f5-479f-ba19-01f311cbdd87', 'Dangote Group', 'dangote-group'),
   ('b91f85eb-d7df-4e0c-b82b-a1de968c0264', 'Jumia', 'jumia'),
   ('d03db4dc-3406-45e0-86b5-7542c6cffd61', 'Banqroll Payments', 'banqroll-payments');
 
+-- +goose StatementEnd
 
-insert into "wallet_types" ("id", "name", "currency", "description")
-values
-  ('aabdd0a6-e35a-4788-85c4-598fbbb12d9e', 'Naira Wallet', 'NGN', 'Wallet for Nigerian Naira'),
-  ('ac18e3c9-dfc3-4d2a-a8a9-cf95a0359346', 'Dollar Wallet', 'USD', 'Wallet for United States Dollar'),
-  ('ca10450e-40f1-41d2-af19-23f3dcd9d5a8', 'Pound Wallet', 'GBP', 'Wallet for British Pound');
+-- +goose Down
+-- +goose StatementBegin
 
--- +goose statementend
+DROP TABLE IF EXISTS "users" CASCADE;
+DROP TABLE IF EXISTS "tenants" CASCADE;
 
--- +goose down
--- +goose statementbegin
-
--- safe down migration
-drop table if exists "wallet_types" cascade;
-drop table if exists "users" cascade;
-drop table if exists "tenants" cascade;
-
--- +goose statementend
+-- +goose StatementEnd

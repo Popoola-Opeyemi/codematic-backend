@@ -24,17 +24,15 @@ type Auth struct {
 func (h *Auth) Init(basePath string, env *Environment) error {
 	h.env = env
 
-	userRepo := user.NewRepository(env.DB.Queries)
-	authRepo := auth.NewRepository(env.DB.Queries)
-	tenantRepo := tenants.NewRepository(env.DB.Queries)
-	userService := user.NewService(userRepo, env.JWTManager, env.Logger)
-	walletService := wallet.NewService(env.DB)
+	userService := user.NewService(env.DB, env.JWTManager, env.Logger)
+	tenantService := tenants.NewService(env.DB, env.JWTManager, env.Logger)
+	walletService := wallet.NewService(env.DB, env.Logger)
 
 	h.service = auth.NewService(
-		authRepo,
+		env.DB,
 		userService,
 		walletService,
-		tenantRepo,
+		tenantService,
 		env.CacheManager,
 		env.JWTManager,
 		env.Config,

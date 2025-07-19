@@ -1,7 +1,9 @@
 package user
 
 import (
-	db "codematic/internal/infrastructure/db/sqlc"
+	"codematic/internal/infrastructure/db"
+	dbsqlc "codematic/internal/infrastructure/db/sqlc"
+
 	"codematic/internal/shared/model"
 	"codematic/internal/shared/utils"
 	"context"
@@ -14,50 +16,63 @@ import (
 )
 
 type userService struct {
-	repo       Repository
+	DB         *db.DBConn
+	Repo       Repository
 	JwtManager *utils.JWTManager
 	logger     *zap.Logger
 }
 
-func NewService(repo Repository, jwtManager *utils.JWTManager,
-	logger *zap.Logger) Service {
+func NewService(db *db.DBConn,
+	jwtManager *utils.JWTManager,
+	logger *zap.Logger,
+) Service {
 	return &userService{
-		repo:       repo,
+		DB:         db,
+		Repo:       NewRepository(db.Queries, db.Pool),
 		JwtManager: jwtManager,
 		logger:     logger,
 	}
 }
 
-func (s *userService) GetUserByEmail(ctx context.Context, email string) (db.User, error) {
-	return s.repo.GetUserByEmail(ctx, email)
+func (s *userService) WithTx(q *dbsqlc.Queries) Service {
+	return &userService{
+		DB:         s.DB,
+		Repo:       NewRepository(q, s.DB.Pool),
+		JwtManager: s.JwtManager,
+		logger:     s.logger,
+	}
 }
 
-func (s *userService) GetUserByEmailAndTenantID(ctx context.Context, email string, tenantID string) (db.User, error) {
-	return s.repo.GetUserByEmailAndTenantID(ctx, email, tenantID)
+func (s *userService) GetUserByEmail(ctx context.Context, email string) (dbsqlc.User, error) {
+	return s.Repo.GetUserByEmail(ctx, email)
 }
 
-func (s *userService) CreateUser(ctx context.Context, req *CreateUserRequest) (db.User, error) {
+func (s *userService) GetUserByEmailAndTenantID(ctx context.Context, email string, tenantID string) (dbsqlc.User, error) {
+	return s.Repo.GetUserByEmailAndTenantID(ctx, email, tenantID)
+}
+
+func (s *userService) CreateUser(ctx context.Context, req *CreateUserRequest) (dbsqlc.User, error) {
 	// Email validation
 	email := req.Email
 	email = utils.StringOrEmpty(&email)
 	email = regexp.MustCompile(`\s+`).ReplaceAllString(email, "")
 	if !utils.IsValidEmail(email) {
-		return db.User{}, model.ErrInvalidEmailFormat
+		return dbsqlc.User{}, model.ErrInvalidEmailFormat
 	}
 
 	// Check for duplicate
-	existing, err := s.repo.GetUserByEmail(ctx, email)
+	existing, err := s.Repo.GetUserByEmail(ctx, email)
 	if err == nil && existing.ID != (pgtype.UUID{}) {
-		return db.User{}, errors.New("user already exists")
+		return dbsqlc.User{}, errors.New("user already exists")
 	}
 
 	hash, err := utils.HashPassword(req.Password)
 	if err != nil {
-		return db.User{}, errors.New("failed to hash password")
+		return dbsqlc.User{}, errors.New("failed to hash password")
 	}
 
 	userID := uuid.New()
-	params := db.CreateUserParams{
+	params := dbsqlc.CreateUserParams{
 		ID:           utils.ToUUID(userID),
 		TenantID:     utils.ToUUID(uuid.MustParse(req.TenantID)),
 		Email:        email,
@@ -65,9 +80,9 @@ func (s *userService) CreateUser(ctx context.Context, req *CreateUserRequest) (d
 		PasswordHash: hash,
 		IsActive:     pgtype.Bool{Bool: req.IsActive, Valid: true},
 	}
-	created, err := s.repo.CreateUser(ctx, params)
+	created, err := s.Repo.CreateUser(ctx, params)
 	if err != nil {
-		return db.User{}, err
+		return dbsqlc.User{}, err
 	}
 	return created, nil
 }

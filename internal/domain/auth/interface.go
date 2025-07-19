@@ -1,6 +1,7 @@
 package auth
 
 import (
+	db "codematic/internal/infrastructure/db/sqlc"
 	"codematic/internal/shared/model"
 	"context"
 )
@@ -14,4 +15,5 @@ type Service interface {
 }
 
 type Repository interface {
+	WithTx(q *db.Queries) Repository
 }

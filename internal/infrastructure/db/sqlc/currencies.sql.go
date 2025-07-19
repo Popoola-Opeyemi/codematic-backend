@@ -11,6 +11,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const activateCurrency = `-- name: ActivateCurrency :exec
+UPDATE currencies 
+SET is_active = true, updated_at = now()
+WHERE code = $1
+`
+
+func (q *Queries) ActivateCurrency(ctx context.Context, code string) error {
+	_, err := q.db.Exec(ctx, activateCurrency, code)
+	return err
+}
+
 const createCurrency = `-- name: CreateCurrency :one
 INSERT INTO currencies (code, name, symbol)
 VALUES ($1, $2, $3)
@@ -45,6 +56,19 @@ SELECT EXISTS (
 
 func (q *Queries) CurrencyExists(ctx context.Context, code string) (bool, error) {
 	row := q.db.QueryRow(ctx, currencyExists, code)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const currencyExistsAnyStatus = `-- name: CurrencyExistsAnyStatus :one
+SELECT EXISTS (
+  SELECT 1 FROM currencies WHERE code = $1
+)
+`
+
+func (q *Queries) CurrencyExistsAnyStatus(ctx context.Context, code string) (bool, error) {
+	row := q.db.QueryRow(ctx, currencyExistsAnyStatus, code)
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
@@ -85,6 +109,61 @@ SELECT code, name, symbol, is_active, created_at, updated_at FROM currencies WHE
 
 func (q *Queries) ListActiveCurrencies(ctx context.Context) ([]Currency, error) {
 	rows, err := q.db.Query(ctx, listActiveCurrencies)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Currency
+	for rows.Next() {
+		var i Currency
+		if err := rows.Scan(
+			&i.Code,
+			&i.Name,
+			&i.Symbol,
+			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listActiveCurrencyCodes = `-- name: ListActiveCurrencyCodes :many
+SELECT code FROM currencies WHERE is_active = true ORDER BY code ASC
+`
+
+func (q *Queries) ListActiveCurrencyCodes(ctx context.Context) ([]string, error) {
+	rows, err := q.db.Query(ctx, listActiveCurrencyCodes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var code string
+		if err := rows.Scan(&code); err != nil {
+			return nil, err
+		}
+		items = append(items, code)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAllCurrencies = `-- name: ListAllCurrencies :many
+SELECT code, name, symbol, is_active, created_at, updated_at FROM currencies ORDER BY code ASC
+`
+
+func (q *Queries) ListAllCurrencies(ctx context.Context) ([]Currency, error) {
+	rows, err := q.db.Query(ctx, listAllCurrencies)
 	if err != nil {
 		return nil, err
 	}

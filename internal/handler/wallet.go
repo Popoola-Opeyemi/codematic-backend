@@ -22,6 +22,7 @@ func (h *Wallet) Init(basePath string, env *Environment) error {
 
 	h.service = wallet.NewService(
 		env.DB,
+		env.Logger,
 	)
 
 	group := env.Fiber.Group(basePath + "/wallet")

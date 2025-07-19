@@ -1,83 +1,102 @@
 -- +goose up
 -- +goose statementbegin
 
-create table "currencies" (
-  "code" varchar primary key, 
-  "name" varchar not null,
-  "symbol" varchar not null, -- e.g. '$', '₦', '€'
-  "is_active" boolean default true,
-  "created_at" timestamptz default now() not null,
-  "updated_at" timestamptz default now() not null
+CREATE TABLE "providers" (
+  "id" UUID PRIMARY KEY,
+  "name" VARCHAR NOT NULL,
+  "code" VARCHAR UNIQUE NOT NULL,
+  "config" JSONB,
+  "is_active" BOOLEAN DEFAULT true,
+  "created_at" TIMESTAMPTZ DEFAULT now() NOT NULL,
+  "updated_at" TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
-create table "providers" (
-  "id" uuid primary key,
-  "name" varchar not null,
-  "code" varchar unique not null, -- 'paystack', 'flutterwave'
-  "config" jsonb,
-  "is_active" boolean default true,
-  "created_at" timestamptz default now() not null,
-  "updated_at" timestamptz default now() not null
+CREATE TABLE "currencies" (
+  "code" VARCHAR PRIMARY KEY, 
+  "name" VARCHAR NOT NULL,
+  "symbol" VARCHAR NOT NULL,
+  "is_active" BOOLEAN DEFAULT true,
+  "created_at" TIMESTAMPTZ DEFAULT now() NOT NULL,
+  "updated_at" TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
-create table "wallets" (
-  "id" uuid primary key,
-  "user_id" uuid not null references users(id) on delete cascade,
-  "wallet_type_id" uuid not null references wallet_types(id),
-  "currency_code" varchar not null references currencies(code),
-  "balance" decimal(18, 2) default 0,
-  "created_at" timestamptz default now() not null,
-  "updated_at" timestamptz default now() not null
+CREATE TABLE "wallet_types" (
+  "id" UUID PRIMARY KEY,
+  "name" VARCHAR NOT NULL,
+  "currency" VARCHAR NOT NULL REFERENCES currencies(code),
+  "is_active" BOOLEAN DEFAULT true,
+  "description" VARCHAR,
+  "created_at" TIMESTAMPTZ DEFAULT now() NOT NULL,
+  "updated_at" TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
-create table "transactions" (
-  "id" uuid primary key,
-  "tenant_id" uuid not null references tenants(id) on delete cascade,
-  "wallet_id" uuid not null references wallets(id),
-  "provider_id" uuid not null references providers(id),
-  "currency_code" varchar not null references currencies(code),
-  "reference" varchar unique not null,
-  "type" varchar not null check (
-    type in ('deposit', 'withdrawal', 'transfer')
+CREATE TABLE "wallets" (
+  "id" UUID PRIMARY KEY,
+  "user_id" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  "wallet_type_id" UUID NOT NULL REFERENCES wallet_types(id),
+  "balance" DECIMAL(18, 2) DEFAULT 0 NOT NULL,
+  "status" VARCHAR NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'frozen', 'closed')),
+  "created_at" TIMESTAMPTZ DEFAULT now() NOT NULL,
+  "updated_at" TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+CREATE TABLE "transactions" (
+  "id" UUID PRIMARY KEY,
+  "tenant_id" UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  "wallet_id" UUID NOT NULL REFERENCES wallets(id),
+  "provider_id" UUID NOT NULL REFERENCES providers(id),
+  "currency_code" VARCHAR NOT NULL REFERENCES currencies(code),
+  "reference" VARCHAR UNIQUE NOT NULL,
+  "type" VARCHAR NOT NULL CHECK (
+    type IN ('deposit', 'withdrawal', 'transfer')
   ),
-  "status" varchar not null check (
-    status in ('pending', 'completed', 'failed')
+  "status" VARCHAR NOT NULL CHECK (
+    status IN ('pending', 'completed', 'failed')
   ),
-  "amount" decimal(18, 2) not null,
-  "fee" decimal(18, 2) default 0,
-  "metadata" jsonb,
-  "error_reason" varchar,
-  "created_at" timestamptz default now() not null,
-  "updated_at" timestamptz default now() not null
+  "amount" DECIMAL(18, 2) NOT NULL,
+  "fee" DECIMAL(18, 2) DEFAULT 0 NOT NULL,
+  "metadata" JSONB,
+  "error_reason" VARCHAR,
+  "created_at" TIMESTAMPTZ DEFAULT now() NOT NULL,
+  "updated_at" TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
-create table "transfers" (
-  "id" uuid primary key,
-  "tenant_id" uuid not null references tenants(id) on delete cascade,
-  "sender_wallet_id" uuid not null references wallets(id),
-  "receiver_wallet_id" uuid not null references wallets(id),
-  "transaction_id" uuid not null references transactions(id) on delete cascade,
-  "amount" decimal(18, 2) not null,
-  "status" varchar not null,
-  "created_at" timestamptz default now() not null,
-  "updated_at" timestamptz default now() not null
+CREATE TABLE "transfers" (
+  "id" UUID PRIMARY KEY,
+  "tenant_id" UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  "sender_wallet_id" UUID NOT NULL REFERENCES wallets(id),
+  "receiver_wallet_id" UUID NOT NULL REFERENCES wallets(id),
+  "transaction_id" UUID NOT NULL REFERENCES transactions(id) ON DELETE CASCADE,
+  "amount" DECIMAL(18, 2) NOT NULL,
+  "status" VARCHAR NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed')),
+  "created_at" TIMESTAMPTZ DEFAULT now() NOT NULL,
+  "updated_at" TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
-INSERT INTO currencies (code, name, symbol)
-VALUES 
+-- Seed currencies
+INSERT INTO currencies (code, name, symbol) VALUES 
   ('USD', 'US Dollar', '$'),
   ('NGN', 'Nigerian Naira', '₦'),
-  ('EUR', 'Euro', '€');
+  ('EUR', 'Euro', '€'),
+  ('GBP', 'British Pound', '£');
 
+-- Seed wallet types
+INSERT INTO wallet_types (id, name, currency, description) VALUES
+  ('aabdd0a6-e35a-4788-85c4-598fbbb12d9e', 'Naira Wallet', 'NGN', 'Wallet for Nigerian Naira'),
+  ('ac18e3c9-dfc3-4d2a-a8a9-cf95a0359346', 'Dollar Wallet', 'USD', 'Wallet for United States Dollar'),
+  ('ca10450e-40f1-41d2-af19-23f3dcd9d5a8', 'Pound Wallet', 'GBP', 'Wallet for British Pound');
 
 -- +goose statementend
+
+
 -- +goose down
 -- +goose statementbegin
 
-drop table if exists "transfers" cascade;
-drop table if exists "transactions" cascade;
-drop table if exists "wallets" cascade;
-drop table if exists "providers" cascade;
-drop table if exists "currencies" cascade;
+DROP TABLE IF EXISTS "transfers" CASCADE;
+DROP TABLE IF EXISTS "transactions" CASCADE;
+DROP TABLE IF EXISTS "wallets" CASCADE;
+DROP TABLE IF EXISTS "wallet_types" CASCADE;
+DROP TABLE IF EXISTS "providers" CASCADE;
+DROP TABLE IF EXISTS "currencies" CASCADE;
 
 -- +goose statementend

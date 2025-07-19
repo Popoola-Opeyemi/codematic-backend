@@ -6,6 +6,9 @@ RETURNING *;
 -- name: GetWalletByID :one
 SELECT * FROM wallets WHERE id = $1;
 
+-- name: ListActiveWalletTypes :many
+SELECT * FROM wallet_types WHERE is_active ORDER BY currency ASC;
+
 -- name: ListWalletsByUserID :many
 SELECT * FROM wallets WHERE user_id = $1 ORDER BY created_at DESC; 
 
@@ -29,12 +32,26 @@ DELETE FROM wallets WHERE id = $1;
 
 
 -- name: CreateWalletWithCurrency :one
-INSERT INTO wallets (id, user_id, wallet_type_id, currency_code, balance)
+INSERT INTO wallets (id, user_id, wallet_type_id, balance, status)
 VALUES ($1, $2, $3, $4, $5)
 RETURNING *;
 
 -- name: ListWalletsByCurrency :many
-SELECT * FROM wallets WHERE currency_code = $1 ORDER BY created_at DESC;
+SELECT w.*
+FROM wallets w
+JOIN wallet_types wt ON w.wallet_type_id = wt.id
+WHERE wt.currency = $1
+ORDER BY w.created_at DESC;
 
 -- name: ListWalletsByUserAndCurrency :many
-SELECT * FROM wallets WHERE user_id = $1 AND currency_code = $2 ORDER BY created_at DESC;
+SELECT w.*
+FROM wallets w
+JOIN wallet_types wt ON w.wallet_type_id = wt.id
+WHERE w.user_id = $1 AND wt.currency = $2
+ORDER BY w.created_at DESC;
+
+-- name: GetWalletTypeIDByCurrency :one
+SELECT id
+FROM wallet_types
+WHERE currency = $1
+LIMIT 1;

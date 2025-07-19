@@ -5,6 +5,7 @@ import (
 	"codematic/internal/shared/utils"
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -40,7 +41,7 @@ func (r *walletRepository) GetWallet(ctx context.Context, walletID string) (*Wal
 	return &Wallet{
 		ID:        w.ID.String(),
 		UserID:    w.UserID.String(),
-		Balance:   *w.Balance,
+		Balance:   w.Balance,
 		CreatedAt: w.CreatedAt.Time,
 		UpdatedAt: w.UpdatedAt.Time,
 	}, nil
@@ -53,7 +54,7 @@ func (r *walletRepository) UpdateWalletBalance(ctx context.Context,
 		return err
 	}
 	return r.q.UpdateWalletBalance(ctx, db.UpdateWalletBalanceParams{
-		Balance: &amount,
+		Balance: amount,
 		ID:      uid,
 	})
 }
@@ -76,7 +77,7 @@ func (r *walletRepository) CreateWallet(ctx context.Context, userID,
 		ID:           pgtype.UUID{Bytes: [16]byte(uid), Valid: true},
 		UserID:       userUUID,
 		WalletTypeID: walletTypeUUID,
-		Balance:      &balance,
+		Balance:      balance,
 	})
 	if err != nil {
 		return nil, err
@@ -84,7 +85,7 @@ func (r *walletRepository) CreateWallet(ctx context.Context, userID,
 	return &Wallet{
 		ID:        w.ID.String(),
 		UserID:    w.UserID.String(),
-		Balance:   *w.Balance,
+		Balance:   w.Balance,
 		CreatedAt: w.CreatedAt.Time,
 		UpdatedAt: w.UpdatedAt.Time,
 	}, nil
@@ -96,7 +97,7 @@ func (r *walletRepository) CreateTransaction(ctx context.Context, tx *Transactio
 	pid, _ := utils.StringToPgUUID(tx.Provider)
 	meta, _ := json.Marshal(tx.Metadata)
 
-	fee := &tx.Fee
+	fee := tx.Fee
 	_, err := r.q.CreateTransaction(ctx, db.CreateTransactionParams{
 		ID:          uid,
 		TenantID:    pgtype.UUID{}, // TODO: set tenant id
@@ -132,9 +133,6 @@ func (r *walletRepository) ListTransactions(ctx context.Context,
 		_ = json.Unmarshal(row.Metadata, &meta)
 
 		fee := decimal.Zero
-		if row.Fee != nil {
-			fee = *row.Fee
-		}
 
 		txs = append(txs, Transaction{
 			ID:        row.ID.String(),
@@ -154,47 +152,60 @@ func (r *walletRepository) ListTransactions(ctx context.Context,
 	return txs, nil
 }
 
-func (r *walletRepository) GetWalletTypeIDByCurrency(ctx context.Context,
-	currency string) (string, error) {
-	var id uuid.UUID
-	row := r.p.QueryRow(ctx, "SELECT id FROM wallet_types WHERE currency = $1 LIMIT 1", currency)
-	if err := row.Scan(&id); err != nil {
-		return "", err
-	}
-	return id.String(), nil
-}
-
-func (r *walletRepository) CreateWalletsForUserByCurrencies(ctx context.Context,
-	userID string, currencies []string) ([]*Wallet, error) {
-	var wallets []*Wallet
-	for _, currency := range currencies {
-		walletTypeID, err := r.GetWalletTypeIDByCurrency(ctx, currency)
-		if err != nil {
-			return nil, err
-		}
-		w, err := r.CreateWallet(ctx, userID, walletTypeID, decimal.NewFromInt(0))
-		if err != nil {
-			return nil, err
-		}
-		wallets = append(wallets, w)
-	}
-	return wallets, nil
-}
-
 func (r *walletRepository) ListActiveCurrencyCodes(ctx context.Context) ([]string, error) {
-	rows, err := r.p.Query(ctx, "SELECT code FROM currencies WHERE is_active = true")
+	rows, err := r.q.ListActiveCurrencyCodes(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
 	var codes []string
-	for rows.Next() {
-		var code string
-		if err := rows.Scan(&code); err != nil {
-			return nil, err
-		}
-		codes = append(codes, code)
+	for _, row := range rows {
+		codes = append(codes, row)
 	}
 	return codes, nil
+}
+
+func (r *walletRepository) GetWalletTypeIDByCurrency(ctx context.Context, currency string) (string, error) {
+	wtID, err := r.q.GetWalletTypeIDByCurrency(ctx, currency)
+	if err != nil {
+		return "", err
+	}
+	return wtID.String(), nil
+}
+
+func (r *walletRepository) CreateWalletsForUserFromAvailableWallets(ctx context.Context,
+	userID string) ([]*Wallet, error) {
+	userUUID, err := utils.StringToPgUUID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	types, err := r.q.ListActiveWalletTypes(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch wallet types: %w", err)
+	}
+
+	var wallets []*Wallet
+	for _, wt := range types {
+		walletID := uuid.New()
+
+		w, err := r.q.CreateWallet(ctx, db.CreateWalletParams{
+			ID:           pgtype.UUID{Bytes: walletID, Valid: true},
+			UserID:       userUUID,
+			WalletTypeID: wt.ID,
+			Balance:      decimal.Zero,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create wallet for wallet type %s: %w", wt.Name, err)
+		}
+
+		wallets = append(wallets, &Wallet{
+			ID:        w.ID.String(),
+			UserID:    w.UserID.String(),
+			Balance:   w.Balance,
+			CreatedAt: w.CreatedAt.Time,
+			UpdatedAt: w.UpdatedAt.Time,
+		})
+	}
+
+	return wallets, nil
 }

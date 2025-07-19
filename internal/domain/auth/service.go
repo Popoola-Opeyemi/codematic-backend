@@ -6,8 +6,11 @@ import (
 	"codematic/internal/domain/user"
 	"codematic/internal/domain/wallet"
 	"codematic/internal/infrastructure/cache"
+	"codematic/internal/infrastructure/db"
+	dbsqlc "codematic/internal/infrastructure/db/sqlc"
 	"codematic/internal/shared/model"
 	"codematic/internal/shared/utils"
+
 	"context"
 	"errors"
 	"strings"
@@ -18,10 +21,12 @@ import (
 )
 
 type authService struct {
-	authRepo      Repository
+	DB   *db.DBConn
+	Repo Repository
+
 	userService   user.Service
 	walletService wallet.Service
-	tenantRepo    tenants.Repository
+	tenantService tenants.Service
 	cacheManager  cache.CacheManager
 	JwtManager    *utils.JWTManager
 	cfg           *config.Config
@@ -29,69 +34,82 @@ type authService struct {
 }
 
 func NewService(
-	authRepo Repository,
+	db *db.DBConn,
 	userService user.Service,
 	walletService wallet.Service,
-	tenantRepo tenants.Repository,
+	tenantService tenants.Service,
 	cacheManager cache.CacheManager,
 	jwtManager *utils.JWTManager,
 	cfg *config.Config,
 	logger *zap.Logger) Service {
 	return &authService{
-		userService:  userService,
-		authRepo:     authRepo,
-		tenantRepo:   tenantRepo,
-		cacheManager: cacheManager,
-		JwtManager:   jwtManager,
-		cfg:          cfg,
-		logger:       logger,
+		DB:            db,
+		Repo:          NewRepository(db.Queries, db.Pool),
+		tenantService: tenantService,
+		userService:   userService,
+		walletService: walletService,
+		cacheManager:  cacheManager,
+		JwtManager:    jwtManager,
+		cfg:           cfg,
+		logger:        logger,
 	}
 }
 
-func (s *authService) Signup(ctx context.Context, req *SignupRequest) (User, error) {
-	// Get tenant by ID
-	tenant, err := s.tenantRepo.GetTenantByID(ctx, req.TenantID)
-	if err != nil {
-		return User{}, errors.New("invalid tenant")
-	}
+func (s *authService) servicesWithTx(q *dbsqlc.Queries) (user.Service, wallet.Service) {
+	return s.userService.WithTx(q), s.walletService.WithTx(q)
+}
 
-	userReq := &user.CreateUserRequest{
-		TenantID: tenant.ID.String(),
-		Email:    req.Email,
-		Phone:    req.Phone,
-		Password: req.Password,
-		IsActive: true,
-	}
-	created, err := s.userService.CreateUser(ctx, userReq)
+func (s *authService) Signup(ctx context.Context, req *SignupRequest) (User, error) {
+	var result User
+
+	s.logger.Debug("Starting Signup", zap.String("email", req.Email), zap.String("tenantID", req.TenantID))
+
+	err := utils.WithTX(ctx, s.DB.Pool, func(q *dbsqlc.Queries) error {
+		tenant, err := s.tenantService.GetTenantByID(ctx, req.TenantID)
+		if err != nil {
+			s.logger.Error("Invalid tenant", zap.Error(err))
+			return errors.New("invalid tenant")
+		}
+
+		userTx, walletTx := s.servicesWithTx(q)
+
+		userReq := &user.CreateUserRequest{
+			TenantID: tenant.ID,
+			Email:    req.Email,
+			Phone:    req.Phone,
+			Password: req.Password,
+			IsActive: true,
+		}
+
+		created, err := userTx.CreateUser(ctx, userReq)
+		if err != nil {
+			s.logger.Error("Create user failed", zap.Error(err))
+			return err
+		}
+
+		if _, err := walletTx.CreateWalletForNewUser(ctx, created.ID.String()); err != nil {
+			s.logger.Error("Create wallet failed", zap.Error(err))
+			return err
+		}
+
+		result = User{
+			ID:        created.ID.String(),
+			Email:     created.Email,
+			FirstName: req.FirstName,
+			LastName:  req.LastName,
+			TenantID:  created.TenantID.String(),
+			Role:      "user",
+		}
+		return nil
+	})
+
 	if err != nil {
+		s.logger.Error("Signup transaction failed", zap.Error(err))
 		return User{}, err
 	}
 
-	// // Hardcoded wallet type UUIDs (replace with actual values from your DB)
-	// ngnWalletTypeID := "00000000-0000-0000-0000-000000000001"
-	// usdWalletTypeID := "00000000-0000-0000-0000-000000000002"
-	// gbpWalletTypeID := "00000000-0000-0000-0000-000000000003"
-
-	// walletService, ok := s.userService.(interface {
-	// 	CreateWallet(ctx context.Context, userID string, walletTypeID string, balance decimal.Decimal) (*wallet.Wallet, error)
-	// })
-	// if !ok {
-	// 	return User{}, errors.New("wallet service not available")
-	// }
-
-	// zero := decimal.NewFromInt(0)
-	// _, _ = walletService.CreateWallet(ctx, created.ID.String(), ngnWalletTypeID, zero)
-	// _, _ = walletService.CreateWallet(ctx, created.ID.String(), usdWalletTypeID, zero)
-	// _, _ = walletService.CreateWallet(ctx, created.ID.String(), gbpWalletTypeID, zero)
-
-	return User{
-		ID:        created.ID.String(),
-		Email:     created.Email,
-		FirstName: req.FirstName,
-		LastName:  req.LastName,
-		TenantID:  created.TenantID.String(),
-		Role:      "user",
-	}, nil
+	s.logger.Info("Signup successful", zap.String("userID", result.ID))
+	return result, nil
 }
 
 func (s *authService) Login(ctx context.Context, req *LoginRequest,
@@ -108,7 +126,6 @@ func (s *authService) Login(ctx context.Context, req *LoginRequest,
 		return nil, errors.New(model.InvalidCredentials)
 	}
 
-	// Check for existing session info for this user
 	existingTokenID, err := s.cacheManager.GetTokenIDForUser(ctx, user.ID.String())
 	var session *model.UserSessionInfo
 	if err == nil && existingTokenID != "" {
@@ -116,7 +133,6 @@ func (s *authService) Login(ctx context.Context, req *LoginRequest,
 		_ = s.cacheManager.DeleteSession(ctx, existingTokenID)
 	}
 
-	// Always generate new tokens and session info
 	tokenID := uuid.New().String()
 	jwtData := model.JWTData{
 		UserID:   user.ID.String(),
@@ -200,7 +216,6 @@ func (s *authService) RefreshToken(ctx context.Context, refreshToken string) (Jw
 		ExpiresIn:    int(utils.SessionExpiry.Seconds()),
 		TokenType:    "Bearer",
 	}, nil
-
 }
 
 func (s *authService) Logout(ctx context.Context, userId string) error {
