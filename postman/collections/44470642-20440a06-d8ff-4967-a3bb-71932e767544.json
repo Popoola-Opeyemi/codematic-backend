@@ -60,7 +60,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"email\":\"samwilson@mailinator.com\",\n    \"password\":\"SamuelWilson\",\n    \"tenant_id\":\"5c5c14bb-47f5-479f-ba19-01f311cbdd87\"\n}",
+							"raw": "{\n    \"email\":\"samwilson@mailinator.com\",\n    \"password\":\"SamuelWilson\",\n    \"tenant_id\": \"5c5c14bb-47f5-479f-ba19-01f311cbdd87\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
