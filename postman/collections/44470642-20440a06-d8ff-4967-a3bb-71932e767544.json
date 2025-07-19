@@ -326,8 +326,39 @@
 			"name": "admin",
 			"item": [
 				{
-					"name": "New Request",
+					"name": "platform-admin",
 					"id": "44470642-29293ec1-dddf-436e-abdb-b95d7404f149",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"admin@platform.com\",\n    \"password\": \"admin123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API_BASE_URL}}/auth/adminlogin",
+							"host": [
+								"{{API_BASE_URL}}"
+							],
+							"path": [
+								"auth",
+								"adminlogin"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "platform-admin Copy",
+					"id": "44470642-7938ce67-378c-40fc-820d-90351f0d8a2c",
 					"protocolProfileBehavior": {
 						"disableBodyPruning": true
 					},
