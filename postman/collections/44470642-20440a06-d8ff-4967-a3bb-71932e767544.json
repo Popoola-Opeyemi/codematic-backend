@@ -377,7 +377,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"email\": \"admin@tenant.com\",\n    \"password\": \"admin123\"\n}",
+							"raw": "{\n    \"email\": \"admin@tenant.com\",\n    \"password\": \"admin123\",\n    \"tenant_id\": \"5c5c14bb-47f5-479f-ba19-01f311cbdd87\"\n\n}",
 							"options": {
 								"raw": {
 									"language": "json"
