@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	db "codematic/internal/infrastructure/db/sqlc"
 	"context"
 
 	"github.com/shopspring/decimal"
@@ -33,4 +34,5 @@ type Repository interface {
 	GetWalletTypeIDByCurrency(ctx context.Context, currency string) (string, error)
 	CreateWalletsForUserByCurrencies(ctx context.Context, userID string, currencies []string) ([]*Wallet, error)
 	ListActiveCurrencyCodes(ctx context.Context) ([]string, error)
+	WithTx(q *db.Queries) Repository
 }

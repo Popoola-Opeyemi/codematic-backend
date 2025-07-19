@@ -26,10 +26,9 @@ func (h *Auth) Init(basePath string, env *Environment) error {
 
 	userRepo := user.NewRepository(env.DB.Queries)
 	authRepo := auth.NewRepository(env.DB.Queries)
-	walletRepo := wallet.NewRepository(env.DB)
 	tenantRepo := tenants.NewRepository(env.DB.Queries)
 	userService := user.NewService(userRepo, env.JWTManager, env.Logger)
-	walletService := wallet.NewService(walletRepo)
+	walletService := wallet.NewService(env.DB)
 
 	h.service = auth.NewService(
 		authRepo,

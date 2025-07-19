@@ -20,10 +20,8 @@ type Wallet struct {
 func (h *Wallet) Init(basePath string, env *Environment) error {
 	h.env = env
 
-	walletRepo := wallet.NewRepository(env.DB)
-
 	h.service = wallet.NewService(
-		walletRepo,
+		env.DB,
 	)
 
 	group := env.Fiber.Group(basePath + "/wallet")
