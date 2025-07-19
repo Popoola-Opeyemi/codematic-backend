@@ -357,7 +357,7 @@
 					"response": []
 				},
 				{
-					"name": "platform-admin Copy",
+					"name": "tenant-admin",
 					"id": "44470642-7938ce67-378c-40fc-820d-90351f0d8a2c",
 					"protocolProfileBehavior": {
 						"disableBodyPruning": true
