@@ -15,11 +15,21 @@
 						"disableBodyPruning": true
 					},
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tenant_admin_authorization}}",
+									"type": "string"
+								}
+							]
+						},
 						"method": "POST",
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n \"first_name\":\"Samuel\",\n \"last_name\":\"Wilson\",\n \"email\":\"samwilson@mailinator.com\",\n \"phone\":\"+2349129282811\",\n \"tenant_id\":\"5c5c14bb-47f5-479f-ba19-01f311cbdd87\",\n \"password\":\"SamuelWilson\"\n\n}",
+							"raw": "{\n \"first_name\":\"Samuel\",\n \"last_name\":\"Wilson\",\n \"email\":\"samwilson@mailinator.com\",\n \"phone\":\"+2349129282811\",\n \"password\":\"SamuelWilson\"\n\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -50,7 +60,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"email\":\"samwilson@mailinator.com\",\n    \"password\":\"SamuelWilson\",\n    \"tenant_id\":\"5c5c14bb-47f5-479f-ba19-01f311cbdd87\"\n}",
+							"raw": "{\n    \"email\":\"samwilson@mailinator.com\",\n    \"password\":\"SamuelWilson\",\n    \"tenant_id\": \"5c5c14bb-47f5-479f-ba19-01f311cbdd87\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -100,7 +110,12 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"user_id\": \"f4a4c330-c82e-48e7-8d73-7657683385a8\",\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"amount\": \"100.00\",\n  \"provider\": \"paystack\",\n  \"metadata\": {}\n}"
+							"raw": "{\n  \"amount\":\"1000\",\n  \"currency\":\"NGN\",\n  \"channel\":\"bank\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{API_BASE_URL}}/wallet/deposit",
@@ -326,7 +341,7 @@
 			"name": "admin",
 			"item": [
 				{
-					"name": "New Request",
+					"name": "platform-admin",
 					"id": "44470642-29293ec1-dddf-436e-abdb-b95d7404f149",
 					"protocolProfileBehavior": {
 						"disableBodyPruning": true
@@ -344,13 +359,44 @@
 							}
 						},
 						"url": {
-							"raw": "{{API_BASE_URL}}/auth/adminlogin",
+							"raw": "{{API_BASE_URL}}/auth/admin",
 							"host": [
 								"{{API_BASE_URL}}"
 							],
 							"path": [
 								"auth",
-								"adminlogin"
+								"admin"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "tenant-admin",
+					"id": "44470642-7938ce67-378c-40fc-820d-90351f0d8a2c",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"admin@tenant.com\",\n    \"password\": \"admin123\",\n    \"tenant_id\": \"d03db4dc-3406-45e0-86b5-7542c6cffd61\"\n\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API_BASE_URL}}/auth/login",
+							"host": [
+								"{{API_BASE_URL}}"
+							],
+							"path": [
+								"auth",
+								"login"
 							]
 						}
 					},
@@ -393,6 +439,11 @@
 		{
 			"key": "access_token",
 			"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3NjU3MWU5MC1lOTJhLTRhYWEtYWExNC01MWQ2YmMwNDExNmUiLCJlbWFpbCI6InNhbXdpbHNvbkBtYWlsaW5hdG9yLmNvbSIsInRlbmFudF9pZCI6IjVjNWMxNGJiLTQ3ZjUtNDc5Zi1iYTE5LTAxZjMxMWNiZGQ4NyIsImV4cCI6MTc1MzQ2NTI3NSwiaWF0IjoxNzUyODYwNDc1LCJqdGkiOiJiMjg0YWRkMi05NTk5LTRlNWYtYjYwMC0yNDJhYjcxOGFlZTcifQ.lGiFvUQIl0F1iz916_XxM74CRbXdyPNYnToNSCd8Gk0",
+			"type": "default"
+		},
+		{
+			"key": "tenant_admin_authorization",
+			"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiMjIyMjIyMi0yMjIyLTIyMjItMjIyMi0yMjIyMjIyMjIyMjIiLCJlbWFpbCI6ImFkbWluQHRlbmFudC5jb20iLCJ0ZW5hbnRfaWQiOiJkMDNkYjRkYy0zNDA2LTQ1ZTAtODZiNS03NTQyYzZjZmZkNjEiLCJyb2xlIjoiVEVOQU5UX0FETUlOIiwiZXhwIjoxNzUzNTY0Njk0LCJpYXQiOjE3NTI5NTk4OTQsImp0aSI6IjhiMjQ3Y2M3LWU0OGYtNGExNS1iNjA3LWQ4N2U2ZDIzODVkZCJ9.0cOipuEsZsyHhPDvtqLXL2farALHi09GHUfVPIHi6u0",
 			"type": "default"
 		}
 	]
