@@ -19,7 +19,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n \"first_name\":\"Samuel\",\n \"last_name\":\"Wilson\",\n \"email\":\"samwilson@mailinator.com\",\n \"phone\":\"+2349129282811\",\n \"tenant_id\":\"5c5c14bb-47f5-479f-ba19-01f311cbdd87\",\n \"password\":\"SamuelWilson\"\n\n}",
+							"raw": "{\n \"first_name\":\"Samuel\",\n \"last_name\":\"Wilson\",\n \"email\":\"samwilson@mailinator.com\",\n \"phone\":\"+2349129282811\",\n \"password\":\"SamuelWilson\"\n\n}",
 							"options": {
 								"raw": {
 									"language": "json"
