@@ -4,6 +4,7 @@ import (
 	"codematic/internal/config"
 	"codematic/internal/infrastructure/cache"
 	"codematic/internal/infrastructure/db"
+	"codematic/internal/infrastructure/events/kafka"
 	"codematic/internal/shared/model"
 	"codematic/internal/shared/utils"
 
@@ -20,14 +21,15 @@ type IHandler interface {
 }
 
 type Environment struct {
-	Config       *config.Config
-	Fiber        *fiber.App
-	DB           *db.DBConn
-	Logger       *zap.Logger
-	Cache        *redis.Client
-	Providers    *model.Providers
-	JWTManager   *utils.JWTManager
-	CacheManager cache.CacheManager
+	Config        *config.Config
+	Fiber         *fiber.App
+	DB            *db.DBConn
+	Logger        *zap.Logger
+	Cache         *redis.Client
+	Providers     *model.Providers
+	JWTManager    *utils.JWTManager
+	CacheManager  cache.CacheManager
+	KafkaProducer *kafka.KafkaProducer
 }
 
 func NewEnvironment(
@@ -39,16 +41,18 @@ func NewEnvironment(
 	Providers *model.Providers,
 	jwtManager *utils.JWTManager,
 	cacheManager cache.CacheManager,
+	kafkaProducer *kafka.KafkaProducer,
 ) *Environment {
 
 	return &Environment{
-		Config:       config,
-		Fiber:        fiber,
-		DB:           db,
-		Cache:        Cache,
-		Logger:       logger,
-		Providers:    Providers,
-		JWTManager:   jwtManager,
-		CacheManager: cacheManager,
+		Config:        config,
+		Fiber:         fiber,
+		DB:            db,
+		Cache:         Cache,
+		Logger:        logger,
+		Providers:     Providers,
+		JWTManager:    jwtManager,
+		CacheManager:  cacheManager,
+		KafkaProducer: kafkaProducer,
 	}
 }

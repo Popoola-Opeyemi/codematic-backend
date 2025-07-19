@@ -166,7 +166,7 @@ func (h *Tenants) Update(c *fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
-	tenant, err := h.service.UpdateTenant(ctx, id, req.Name, req.Slug)
+	tenant, err := h.service.UpdateTenant(ctx, id, req.Name, req.Slug, req.WebhookURL)
 	if err != nil {
 		h.env.Logger.Error("Failed to update tenant", zap.Error(err))
 		return utils.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())

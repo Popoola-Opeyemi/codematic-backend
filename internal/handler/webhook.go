@@ -2,24 +2,19 @@ package handler
 
 import (
 	"codematic/internal/domain/webhook"
+	"codematic/internal/shared/model"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
 )
 
-// Webhook handles incoming and replayed webhook events from payment providers.
 type Webhook struct {
 	service webhook.Service
 	env     *Environment
 }
 
-// Init sets up the webhook handler routes and injects dependencies.
-// @param basePath The base API path (e.g. /api)
-// @param env The application environment (dependencies)
-// @param service The webhook service implementation
 func (h *Webhook) Init(basePath string, env *Environment, service webhook.Service) error {
 	h.env = env
-	h.service = service
+	h.service = webhook.NewService(env.DB, env.Config)
 
 	group := env.Fiber.Group(basePath + "/webhook")
 	group.Post("/:provider", h.Receive)
@@ -36,14 +31,26 @@ func (h *Webhook) Init(basePath string, env *Environment, service webhook.Servic
 // @Produce      json
 // @Param        provider  path  string  true  "Provider code"
 // @Success      200  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
 // @Failure      500  {object}  map[string]string
 // @Router       /webhook/{provider} [post]
 func (h *Webhook) Receive(c *fiber.Ctx) error {
 	provider := c.Params("provider")
 	payload := c.Body()
-	if err := h.service.ProcessWebhook(c.Context(), provider, payload); err != nil {
+
+	headers := map[string]string{}
+	c.Request().Header.VisitAll(func(key, val []byte) {
+		headers[string(key)] = string(val)
+	})
+
+	err := h.service.ProcessWebhook(c.Context(), provider, headers, payload)
+	if err != nil {
+		if err == model.ErrInvalidSignature {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": err.Error()})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
+
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": "webhook processed"})
 }
 
@@ -61,12 +68,7 @@ func (h *Webhook) Receive(c *fiber.Ctx) error {
 func (h *Webhook) Replay(c *fiber.Ctx) error {
 	idStr := c.Params("id")
 
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id"})
-	}
-
-	if err := h.service.ReplayWebhook(c.Context(), id); err != nil {
+	if err := h.service.ReplayWebhook(c.Context(), idStr); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 

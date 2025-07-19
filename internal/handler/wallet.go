@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"codematic/internal/domain/idempotency"
 	"codematic/internal/domain/provider"
 	"codematic/internal/domain/wallet"
 	"codematic/internal/middleware"
@@ -20,23 +21,24 @@ type Wallet struct {
 func (h *Wallet) Init(basePath string, env *Environment) error {
 	h.env = env
 
+	idempotencyRepo := idempotency.NewRepository(env.DB.Queries, env.DB.Pool)
+	providerService := provider.NewService(env.DB, env.CacheManager, env.Logger, env.KafkaProducer)
+
 	h.service = wallet.NewService(
+		providerService,
 		env.DB,
 		env.Logger,
+		env.KafkaProducer,
 	)
 
 	group := env.Fiber.Group(basePath + "/wallet")
 
-	// Public webhook route (should not require auth)
-	group.Post("/webhook/:provider", h.Webhook)
-
-	// Protected routes group with JWT middleware
 	protected := group.Use(middleware.JWTMiddleware(
 		env.JWTManager,
 		env.CacheManager,
 	))
 
-	idm := middleware.NewIdempotencyMiddleware(env.DB.Queries)
+	idm := middleware.NewIdempotencyMiddleware(idempotencyRepo)
 
 	// Add idempotency middleware to transaction-creating routes
 	protected.Post("/deposit", idm.Handle, h.Deposit)
@@ -76,12 +78,15 @@ func (h *Wallet) Deposit(c *fiber.Ctx) error {
 		)
 	}
 
+	userID := utils.ExtractUserIDFromJWT(c)
+	tenantID := utils.ExtractTenantFromJWT(c)
+
 	form := wallet.DepositForm{
-		UserID:   req.UserID,
-		TenantID: req.TenantID,
-		WalletID: req.WalletID,
+		UserID:   userID,
+		TenantID: tenantID,
 		Amount:   amount,
-		Provider: req.Provider,
+		Provider: req.Currency,
+		Channel:  req.Channel,
 		Metadata: req.Metadata,
 	}
 
@@ -230,30 +235,4 @@ func (h *Wallet) GetTransactions(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
 	}
 	return c.Status(200).JSON(fiber.Map{"transactions": txs})
-}
-
-// Webhook godoc
-// @Summary      Handle provider webhook
-// @Description  Processes webhook events from any payment provider
-// @Tags         wallet
-// @Accept       json
-// @Produce      json
-// @Param        provider  path  string  true  "Provider code"
-// @Success      200  {object}  map[string]string
-// @Failure      400  {object}  map[string]string
-// @Router       /wallet/webhook/{provider} [post]
-func (h *Wallet) Webhook(c *fiber.Ctx) error {
-	providerCode := c.Params("provider")
-
-	prov, ok := provider.GetProvider(providerCode)
-	if !ok {
-		return utils.SendErrorResponse(c, fiber.StatusBadRequest, "unsupported provider")
-	}
-
-	err := prov.HandleWebhook(c.Context(), c.Body())
-	if err != nil {
-		return utils.SendErrorResponse(c, fiber.StatusInternalServerError, err.Error())
-	}
-
-	return utils.SendSuccessResponse(c, fiber.StatusOK, fiber.Map{"status": "webhook processed"})
 }
