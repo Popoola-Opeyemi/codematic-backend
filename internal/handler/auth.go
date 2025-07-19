@@ -42,13 +42,16 @@ func (h *Auth) Init(basePath string, env *Environment) error {
 	// Public auth routes
 	authGroup := env.Fiber.Group(basePath + "/auth")
 	authGroup.Post("/login", h.Login)
-	authGroup.Post("/signup", h.Signup)
+
+	authGroup.Post("/signup", middleware.JWTMiddleware(env.JWTManager, env.CacheManager),
+		middleware.RoleMiddleware("TENANT_ADMIN"), h.Signup)
 
 	// Protected routes group with JWT middleware
 	protected := authGroup.Use(middleware.JWTMiddleware(
 		env.JWTManager,
 		env.CacheManager,
 	))
+	// protected.Get("/users", middleware.RoleMiddleware("TENANT_ADMIN"), h.ListUsers)
 	protected.Post("/logout", h.Logout)
 	protected.Post("/refresh", h.RefreshToken)
 
@@ -164,5 +167,4 @@ func (h *Auth) RefreshToken(c *fiber.Ctx) error {
 	}
 
 	return utils.SendSuccessResponse(c, 200, auth)
-
 }

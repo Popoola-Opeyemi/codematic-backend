@@ -25,7 +25,24 @@ func (r *userRepository) WithTx(q *db.Queries) Repository {
 }
 
 func (r *userRepository) GetUserByEmail(ctx context.Context, email string) (db.User, error) {
-	return r.q.GetUserByEmail(ctx, email)
+
+	data, err := r.q.GetUserByEmail(ctx, email)
+	if err != nil {
+		return db.User{}, err
+	}
+	user := db.User{
+		ID:           data.ID,
+		TenantID:     data.TenantID,
+		Email:        data.Email,
+		Phone:        data.Phone,
+		PasswordHash: data.PasswordHash,
+		Role:         data.Role,
+		IsActive:     data.IsActive,
+		CreatedAt:    data.CreatedAt,
+		UpdatedAt:    data.UpdatedAt,
+	}
+
+	return user, nil
 }
 
 func (r *userRepository) CreateUser(ctx context.Context, params db.CreateUserParams) (db.User, error) {
@@ -38,8 +55,24 @@ func (r *userRepository) GetUserByEmailAndTenantID(ctx context.Context,
 	if err != nil {
 		return db.User{}, err
 	}
-	return r.q.GetUserByEmailAndTenantID(ctx, db.GetUserByEmailAndTenantIDParams{
+	data, err := r.q.GetUserByEmailAndTenantID(ctx, db.GetUserByEmailAndTenantIDParams{
 		Email:    email,
 		TenantID: uuidTenant,
 	})
+	if err != nil {
+		return db.User{}, err
+	}
+	user := db.User{
+		ID:           data.ID,
+		TenantID:     data.TenantID,
+		Email:        data.Email,
+		Phone:        data.Phone,
+		PasswordHash: data.PasswordHash,
+		Role:         data.Role,
+		IsActive:     data.IsActive,
+		CreatedAt:    data.CreatedAt,
+		UpdatedAt:    data.UpdatedAt,
+	}
+	return user, nil
+
 }

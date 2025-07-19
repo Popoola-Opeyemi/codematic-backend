@@ -4,13 +4,16 @@
 create table "webhook_events" (
   "id" uuid primary key,
   "provider_id" uuid not null references providers(id) on delete cascade,
+  "provider_event_id" varchar not null,
+  "tenant_id" uuid not null references tenants(id) on delete cascade,
   "event_type" varchar not null,
   "payload" jsonb not null,
   "status" varchar not null default 'received', -- 'received', 'processed', 'failed'
   "attempts" integer default 0,
   "last_error" varchar,
   "created_at" timestamp with time zone default now() not null,
-  "updated_at" timestamp with time zone default now() not null
+  "updated_at" timestamp with time zone default now() not null,
+  unique ("provider_id", "provider_event_id")
 );
 
 create table "audit_logs" (

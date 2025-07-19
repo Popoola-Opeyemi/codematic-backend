@@ -6,6 +6,7 @@ type Claims struct {
 	UserID   string `json:"sub"`
 	Email    string `json:"email"`
 	TenantID string `json:"tenant_id"`
+	Role     string `json:"role"`
 	jwt.RegisteredClaims
 }
 
@@ -14,4 +15,5 @@ type JWTData struct {
 	Email    string
 	TenantID string
 	TokenID  string
+	Role     string
 }

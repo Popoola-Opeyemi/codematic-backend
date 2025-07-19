@@ -23,7 +23,7 @@ type Service interface {
 }
 
 type Repository interface {
-	CreateWalletsForUserFromAvailableWallets(ctx context.Context,
+	CreateWalletsForNewUserFromAvailableWallets(ctx context.Context,
 		userID string) ([]*Wallet, error)
 	GetWallet(ctx context.Context, walletID string) (*Wallet, error)
 	UpdateWalletBalance(ctx context.Context, walletID string,

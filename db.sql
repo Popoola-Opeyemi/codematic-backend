@@ -13,6 +13,7 @@ CREATE TABLE "users" (
   "phone" varchar,
   "password_hash" varchar,
   "is_active" boolean,
+  "role" varchar DEFAULT 'USER',
   "created_at" timestamp,
   "updated_at" timestamp
 );

@@ -98,7 +98,7 @@ func (s *authService) Signup(ctx context.Context, req *SignupRequest) (User, err
 			FirstName: req.FirstName,
 			LastName:  req.LastName,
 			TenantID:  created.TenantID.String(),
-			Role:      "user",
+			Role:      created.Role.String,
 		}
 		return nil
 	})
@@ -139,6 +139,7 @@ func (s *authService) Login(ctx context.Context, req *LoginRequest,
 		Email:    user.Email,
 		TenantID: user.TenantID.String(),
 		TokenID:  tokenID,
+		Role:     user.Role.String,
 	}
 
 	jwt, err := s.JwtManager.GenerateJWT(jwtData)
@@ -182,7 +183,7 @@ func (s *authService) Login(ctx context.Context, req *LoginRequest,
 			FirstName: "",
 			LastName:  "",
 			TenantID:  user.TenantID.String(),
-			Role:      "user",
+			Role:      user.Role.String,
 		},
 	}, nil
 }
@@ -197,7 +198,8 @@ func (s *authService) RefreshToken(ctx context.Context, refreshToken string) (Jw
 		UserID:   claims.UserID,
 		Email:    claims.Email,
 		TenantID: claims.TenantID,
-		TokenID:  claims.TenantID,
+		TokenID:  claims.ID, // Use ID from RegisteredClaims
+		Role:     claims.Role,
 	}
 
 	jwt, err := s.JwtManager.GenerateJWT(jwtData)

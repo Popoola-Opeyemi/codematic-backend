@@ -171,7 +171,7 @@ func (s *WalletService) Transfer(ctx context.Context, data TransferForm) error {
 func (s *WalletService) CreateWalletForNewUser(ctx context.Context,
 	userID string) ([]*Wallet, error) {
 
-	d, err := s.Repo.CreateWalletsForUserFromAvailableWallets(ctx, userID)
+	d, err := s.Repo.CreateWalletsForNewUserFromAvailableWallets(ctx, userID)
 	if err != nil {
 		s.logger.Sugar().Info("CreateWalletsForUserByCurrencies error occured", err)
 		return nil, err

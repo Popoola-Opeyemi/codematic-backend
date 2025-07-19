@@ -157,14 +157,12 @@ func (r *walletRepository) ListActiveCurrencyCodes(ctx context.Context) ([]strin
 	if err != nil {
 		return nil, err
 	}
-	var codes []string
-	for _, row := range rows {
-		codes = append(codes, row)
-	}
-	return codes, nil
+
+	return rows, nil
 }
 
-func (r *walletRepository) GetWalletTypeIDByCurrency(ctx context.Context, currency string) (string, error) {
+func (r *walletRepository) GetWalletTypeIDByCurrency(ctx context.Context,
+	currency string) (string, error) {
 	wtID, err := r.q.GetWalletTypeIDByCurrency(ctx, currency)
 	if err != nil {
 		return "", err
@@ -172,7 +170,7 @@ func (r *walletRepository) GetWalletTypeIDByCurrency(ctx context.Context, curren
 	return wtID.String(), nil
 }
 
-func (r *walletRepository) CreateWalletsForUserFromAvailableWallets(ctx context.Context,
+func (r *walletRepository) CreateWalletsForNewUserFromAvailableWallets(ctx context.Context,
 	userID string) ([]*Wallet, error) {
 	userUUID, err := utils.StringToPgUUID(userID)
 	if err != nil {

@@ -29,17 +29,17 @@ func (h *Tenants) Init(basePath string, env *Environment) error {
 	// Public auth routes
 	group := env.Fiber.Group(basePath + "/tenant")
 
-	// Protected routes group with JWT middleware
 	protected := group.Use(middleware.JWTMiddleware(
 		env.JWTManager,
 		env.CacheManager,
 	))
-	protected.Post("/create", h.Create)
-	protected.Get("/:id", h.GetByID)
-	protected.Get("/slug/:slug", h.GetBySlug)
-	protected.Get("/", h.List)
-	protected.Put("/:id", h.Update)
-	protected.Delete("/:id", h.Delete)
+
+	protected.Post("/create", middleware.RoleMiddleware("PLATFORM_ADMIN"), h.Create)
+	protected.Get("/:id", middleware.RoleMiddleware("PLATFORM_ADMIN"), h.GetByID)
+	protected.Get("/slug/:slug", middleware.RoleMiddleware("PLATFORM_ADMIN"), h.GetBySlug)
+	protected.Get("/", middleware.RoleMiddleware("PLATFORM_ADMIN"), h.List)
+	protected.Put("/:id", middleware.RoleMiddleware("PLATFORM_ADMIN"), h.Update)
+	protected.Delete("/:id", middleware.RoleMiddleware("PLATFORM_ADMIN"), h.Delete)
 
 	return nil
 

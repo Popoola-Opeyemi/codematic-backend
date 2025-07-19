@@ -72,6 +72,10 @@ func (s *userService) CreateUser(ctx context.Context, req *CreateUserRequest) (d
 	}
 
 	userID := uuid.New()
+	role := string(RoleUser)
+	if req.Role != "" {
+		role = string(req.Role)
+	}
 	params := dbsqlc.CreateUserParams{
 		ID:           utils.ToUUID(userID),
 		TenantID:     utils.ToUUID(uuid.MustParse(req.TenantID)),
@@ -79,6 +83,7 @@ func (s *userService) CreateUser(ctx context.Context, req *CreateUserRequest) (d
 		Phone:        utils.ToDBString(&req.Phone),
 		PasswordHash: hash,
 		IsActive:     pgtype.Bool{Bool: req.IsActive, Valid: true},
+		Role:         utils.ToDBString(&role),
 	}
 	created, err := s.Repo.CreateUser(ctx, params)
 	if err != nil {

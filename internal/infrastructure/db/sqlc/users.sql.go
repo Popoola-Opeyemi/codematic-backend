@@ -12,9 +12,9 @@ import (
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (id, tenant_id, email, phone, password_hash, is_active, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, now(), now())
-RETURNING id, tenant_id, email, phone, password_hash, is_active, created_at, updated_at
+INSERT INTO users (id, tenant_id, email, phone, password_hash, is_active, role, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, now(), now())
+RETURNING id, tenant_id, email, phone, password_hash, role, is_active, created_at, updated_at
 `
 
 type CreateUserParams struct {
@@ -24,6 +24,7 @@ type CreateUserParams struct {
 	Phone        pgtype.Text
 	PasswordHash string
 	IsActive     pgtype.Bool
+	Role         pgtype.Text
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
@@ -34,6 +35,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		arg.Phone,
 		arg.PasswordHash,
 		arg.IsActive,
+		arg.Role,
 	)
 	var i User
 	err := row.Scan(
@@ -42,6 +44,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Email,
 		&i.Phone,
 		&i.PasswordHash,
+		&i.Role,
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -71,28 +74,43 @@ func (q *Queries) DeleteUser(ctx context.Context, id pgtype.UUID) error {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, tenant_id, email, phone, password_hash, is_active, created_at, updated_at FROM users
+SELECT id, tenant_id, email, phone, password_hash, role, is_active, created_at, updated_at, role FROM users
 WHERE email = $1
 `
 
-func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+type GetUserByEmailRow struct {
+	ID           pgtype.UUID
+	TenantID     pgtype.UUID
+	Email        string
+	Phone        pgtype.Text
+	PasswordHash string
+	Role         pgtype.Text
+	IsActive     pgtype.Bool
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	Role_2       pgtype.Text
+}
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
 	row := q.db.QueryRow(ctx, getUserByEmail, email)
-	var i User
+	var i GetUserByEmailRow
 	err := row.Scan(
 		&i.ID,
 		&i.TenantID,
 		&i.Email,
 		&i.Phone,
 		&i.PasswordHash,
+		&i.Role,
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Role_2,
 	)
 	return i, err
 }
 
 const getUserByEmailAndTenantID = `-- name: GetUserByEmailAndTenantID :one
-SELECT id, tenant_id, email, phone, password_hash, is_active, created_at, updated_at FROM users
+SELECT id, tenant_id, email, phone, password_hash, role, is_active, created_at, updated_at, role FROM users
 WHERE email = $1 AND tenant_id = $2
 `
 
@@ -101,67 +119,112 @@ type GetUserByEmailAndTenantIDParams struct {
 	TenantID pgtype.UUID
 }
 
-func (q *Queries) GetUserByEmailAndTenantID(ctx context.Context, arg GetUserByEmailAndTenantIDParams) (User, error) {
+type GetUserByEmailAndTenantIDRow struct {
+	ID           pgtype.UUID
+	TenantID     pgtype.UUID
+	Email        string
+	Phone        pgtype.Text
+	PasswordHash string
+	Role         pgtype.Text
+	IsActive     pgtype.Bool
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	Role_2       pgtype.Text
+}
+
+func (q *Queries) GetUserByEmailAndTenantID(ctx context.Context, arg GetUserByEmailAndTenantIDParams) (GetUserByEmailAndTenantIDRow, error) {
 	row := q.db.QueryRow(ctx, getUserByEmailAndTenantID, arg.Email, arg.TenantID)
-	var i User
+	var i GetUserByEmailAndTenantIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.TenantID,
 		&i.Email,
 		&i.Phone,
 		&i.PasswordHash,
+		&i.Role,
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Role_2,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, tenant_id, email, phone, password_hash, is_active, created_at, updated_at FROM users
+SELECT id, tenant_id, email, phone, password_hash, role, is_active, created_at, updated_at, role FROM users
 WHERE id = $1
 `
 
-func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (User, error) {
+type GetUserByIDRow struct {
+	ID           pgtype.UUID
+	TenantID     pgtype.UUID
+	Email        string
+	Phone        pgtype.Text
+	PasswordHash string
+	Role         pgtype.Text
+	IsActive     pgtype.Bool
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	Role_2       pgtype.Text
+}
+
+func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDRow, error) {
 	row := q.db.QueryRow(ctx, getUserByID, id)
-	var i User
+	var i GetUserByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.TenantID,
 		&i.Email,
 		&i.Phone,
 		&i.PasswordHash,
+		&i.Role,
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Role_2,
 	)
 	return i, err
 }
 
 const listUsersByTenant = `-- name: ListUsersByTenant :many
-SELECT id, tenant_id, email, phone, password_hash, is_active, created_at, updated_at FROM users
+SELECT id, tenant_id, email, phone, password_hash, role, is_active, created_at, updated_at, role FROM users
 WHERE tenant_id = $1
 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListUsersByTenant(ctx context.Context, tenantID pgtype.UUID) ([]User, error) {
+type ListUsersByTenantRow struct {
+	ID           pgtype.UUID
+	TenantID     pgtype.UUID
+	Email        string
+	Phone        pgtype.Text
+	PasswordHash string
+	Role         pgtype.Text
+	IsActive     pgtype.Bool
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	Role_2       pgtype.Text
+}
+
+func (q *Queries) ListUsersByTenant(ctx context.Context, tenantID pgtype.UUID) ([]ListUsersByTenantRow, error) {
 	rows, err := q.db.Query(ctx, listUsersByTenant, tenantID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []User
+	var items []ListUsersByTenantRow
 	for rows.Next() {
-		var i User
+		var i ListUsersByTenantRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.TenantID,
 			&i.Email,
 			&i.Phone,
 			&i.PasswordHash,
+			&i.Role,
 			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Role_2,
 		); err != nil {
 			return nil, err
 		}

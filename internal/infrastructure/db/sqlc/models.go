@@ -93,6 +93,7 @@ type User struct {
 	Email        string
 	Phone        pgtype.Text
 	PasswordHash string
+	Role         pgtype.Text
 	IsActive     pgtype.Bool
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
@@ -131,13 +132,15 @@ type WalletType struct {
 }
 
 type WebhookEvent struct {
-	ID         pgtype.UUID
-	ProviderID pgtype.UUID
-	EventType  string
-	Payload    []byte
-	Status     string
-	Attempts   pgtype.Int4
-	LastError  pgtype.Text
-	CreatedAt  pgtype.Timestamptz
-	UpdatedAt  pgtype.Timestamptz
+	ID              pgtype.UUID
+	ProviderID      pgtype.UUID
+	ProviderEventID string
+	TenantID        pgtype.UUID
+	EventType       string
+	Payload         []byte
+	Status          string
+	Attempts        pgtype.Int4
+	LastError       pgtype.Text
+	CreatedAt       pgtype.Timestamptz
+	UpdatedAt       pgtype.Timestamptz
 }

@@ -1,3 +1,5 @@
 package kafka
 
-const ()
+const (
+	TopicWebhook = ""
+)

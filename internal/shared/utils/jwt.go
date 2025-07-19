@@ -27,6 +27,7 @@ func (j *JWTManager) GenerateJWT(data model.JWTData) (string, error) {
 		UserID:   data.UserID,
 		Email:    data.Email,
 		TenantID: data.TenantID,
+		Role:     data.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   data.UserID,
 			ID:        data.TokenID,
@@ -44,6 +45,7 @@ func (j *JWTManager) GenerateRefreshToken(data model.JWTData) (string, error) {
 		UserID:   data.UserID,
 		Email:    data.Email,
 		TenantID: data.TenantID,
+		Role:     data.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   data.UserID,
 			ID:        data.TokenID,
