@@ -100,7 +100,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"amount\": \"100.00\",\n  \"provider\": \"paystack\",\n  \"metadata\": {}\n}"
+							"raw": "{\n  \"user_id\": \"f4a4c330-c82e-48e7-8d73-7657683385a8\",\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"amount\": \"100.00\",\n  \"provider\": \"paystack\",\n  \"metadata\": {}\n}"
 						},
 						"url": {
 							"raw": "{{API_BASE_URL}}/wallet/deposit",
