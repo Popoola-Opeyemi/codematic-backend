@@ -323,8 +323,21 @@
 			]
 		},
 		{
-			"name": "New Folder",
-			"item": [],
+			"name": "admin",
+			"item": [
+				{
+					"name": "New Request",
+					"id": "44470642-29293ec1-dddf-436e-abdb-b95d7404f149",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				}
+			],
 			"id": "44470642-257ff355-9682-429d-bf19-3305dd310749"
 		}
 	],
