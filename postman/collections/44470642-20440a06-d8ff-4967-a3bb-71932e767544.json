@@ -307,7 +307,7 @@
 				"bearer": [
 					{
 						"key": "token",
-						"value": "{{access_token}}",
+						"value": "{{user_authorization}}",
 						"type": "string"
 					}
 				]
@@ -316,7 +316,7 @@
 				{
 					"listen": "prerequest",
 					"script": {
-						"id": "efa6fc6d-1c0e-434d-ad62-6bb69c2d49cf",
+						"id": "e0b5913e-5548-466c-a6d4-80fbb426879b",
 						"type": "text/javascript",
 						"packages": {},
 						"exec": [
@@ -327,7 +327,7 @@
 				{
 					"listen": "test",
 					"script": {
-						"id": "f87296a1-800a-4797-ae05-fb98119e7eed",
+						"id": "ee4a766b-a30b-488c-9ec5-b7522d6040bb",
 						"type": "text/javascript",
 						"packages": {},
 						"exec": [
@@ -444,6 +444,11 @@
 		{
 			"key": "tenant_admin_authorization",
 			"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiMjIyMjIyMi0yMjIyLTIyMjItMjIyMi0yMjIyMjIyMjIyMjIiLCJlbWFpbCI6ImFkbWluQHRlbmFudC5jb20iLCJ0ZW5hbnRfaWQiOiJkMDNkYjRkYy0zNDA2LTQ1ZTAtODZiNS03NTQyYzZjZmZkNjEiLCJyb2xlIjoiVEVOQU5UX0FETUlOIiwiZXhwIjoxNzUzNTY0Njk0LCJpYXQiOjE3NTI5NTk4OTQsImp0aSI6IjhiMjQ3Y2M3LWU0OGYtNGExNS1iNjA3LWQ4N2U2ZDIzODVkZCJ9.0cOipuEsZsyHhPDvtqLXL2farALHi09GHUfVPIHi6u0",
+			"type": "default"
+		},
+		{
+			"key": "user_authorization",
+			"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlNTY4NjIzYi03ZjRlLTRjOGMtOGRkMi1iZGI2MTM0ODQ0ZDYiLCJlbWFpbCI6InNhbXdpbHNvbkBtYWlsaW5hdG9yLmNvbSIsInRlbmFudF9pZCI6ImQwM2RiNGRjLTM0MDYtNDVlMC04NmI1LTc1NDJjNmNmZmQ2MSIsInJvbGUiOiJVU0VSIiwiZXhwIjoxNzUzNTcxMTYwLCJpYXQiOjE3NTI5NjYzNjAsImp0aSI6IjAzOTUzNjYzLTAyZjgtNDFiNi04YzI3LTJjNzVjZDA3YTI5MCJ9.dXO-T4F6PuBwNC0bExBS0HeWNxuyqOq6Fk-eGygbakY",
 			"type": "default"
 		}
 	]
