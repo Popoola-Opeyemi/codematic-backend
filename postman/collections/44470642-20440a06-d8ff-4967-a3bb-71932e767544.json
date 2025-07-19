@@ -367,7 +367,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"email\": \"admin@platform.com\",\n    \"password\": \"admin123\"\n}",
+							"raw": "{\n    \"email\": \"admin@tenant.com\",\n    \"password\": \"admin123\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
