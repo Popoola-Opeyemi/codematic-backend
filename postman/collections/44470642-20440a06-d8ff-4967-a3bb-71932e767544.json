@@ -354,13 +354,13 @@
 							}
 						},
 						"url": {
-							"raw": "{{API_BASE_URL}}/auth/adminlogin",
+							"raw": "{{API_BASE_URL}}/auth/admin",
 							"host": [
 								"{{API_BASE_URL}}"
 							],
 							"path": [
 								"auth",
-								"adminlogin"
+								"admin"
 							]
 						}
 					},
