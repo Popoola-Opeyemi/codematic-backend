@@ -336,7 +336,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"email\": \"admin@codematic.com\",\n    \"password\": \"SamuelWilson\"\n}",
+							"raw": "{\n    \"email\": \"admin@codematic.com\",\n    \"password\": \"admin123\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -344,13 +344,13 @@
 							}
 						},
 						"url": {
-							"raw": "{{API_BASE_URL}}/auth/login",
+							"raw": "{{API_BASE_URL}}/auth/admin-login",
 							"host": [
 								"{{API_BASE_URL}}"
 							],
 							"path": [
 								"auth",
-								"login"
+								"admin-login"
 							]
 						}
 					},
