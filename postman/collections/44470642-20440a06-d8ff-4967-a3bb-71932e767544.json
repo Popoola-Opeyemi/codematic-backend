@@ -344,13 +344,13 @@
 							}
 						},
 						"url": {
-							"raw": "{{API_BASE_URL}}/auth/admin-login",
+							"raw": "{{API_BASE_URL}}/auth/adminlogin",
 							"host": [
 								"{{API_BASE_URL}}"
 							],
 							"path": [
 								"auth",
-								"admin-login"
+								"adminlogin"
 							]
 						}
 					},
