@@ -23,9 +23,9 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/auth/login": {
+        "/auth/admin": {
             "post": {
-                "description": "Authenticates a user and returns tokens",
+                "description": "Authenticates a platform admin and returns tokens",
                 "consumes": [
                     "application/json"
                 ],
@@ -35,7 +35,45 @@ const docTemplate = `{
                 "tags": [
                     "auth"
                 ],
-                "summary": "Login a user",
+                "summary": "Login a platform admin",
+                "parameters": [
+                    {
+                        "description": "Login request",
+                        "name": "loginRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {}
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/login": {
+            "post": {
+                "description": "Authenticates a tenant user and returns tokens. TenantID must be provided in the request body.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Login a tenant user (regular or tenant admin)",
                 "parameters": [
                     {
                         "description": "Login request",
@@ -353,9 +391,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/wallet/transfer": {
+        "/wallet/initiate-deposit": {
             "post": {
-                "description": "Transfers a specified amount from one wallet to another",
+                "description": "Initiates a deposit with full validation and provider integration",
                 "consumes": [
                     "application/json"
                 ],
@@ -365,15 +403,15 @@ const docTemplate = `{
                 "tags": [
                     "wallet"
                 ],
-                "summary": "Transfer funds between wallets",
+                "summary": "Initiate a deposit with provider integration",
                 "parameters": [
                     {
-                        "description": "Transfer request",
-                        "name": "transferRequest",
+                        "description": "Deposit request",
+                        "name": "depositRequest",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object"
+                            "$ref": "#/definitions/wallet.DepositRequest"
                         }
                     }
                 ],
@@ -399,9 +437,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/wallet/webhook/{provider}": {
+        "/wallet/transfer": {
             "post": {
-                "description": "Processes webhook events from any payment provider",
+                "description": "Transfers a specified amount from one wallet to another",
                 "consumes": [
                     "application/json"
                 ],
@@ -411,14 +449,16 @@ const docTemplate = `{
                 "tags": [
                     "wallet"
                 ],
-                "summary": "Handle provider webhook",
+                "summary": "Transfer funds between wallets",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Provider code",
-                        "name": "provider",
-                        "in": "path",
-                        "required": true
+                        "description": "Transfer request",
+                        "name": "transferRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
                     }
                 ],
                 "responses": {
@@ -591,6 +631,112 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/webhook/replay/{id}": {
+            "post": {
+                "description": "Replays a previously failed webhook event by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "webhook"
+                ],
+                "summary": "Replay a webhook event",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Webhook Event ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/webhook/{provider}": {
+            "post": {
+                "description": "Processes webhook events from any payment provider",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "webhook"
+                ],
+                "summary": "Handle provider webhook",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Provider code",
+                        "name": "provider",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -598,8 +744,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "email",
-                "password",
-                "tenant_id"
+                "password"
             ],
             "properties": {
                 "email": {
@@ -621,8 +766,7 @@ const docTemplate = `{
                 "first_name",
                 "last_name",
                 "password",
-                "phone",
-                "tenant_id"
+                "phone"
             ],
             "properties": {
                 "email": {
@@ -670,6 +814,9 @@ const docTemplate = `{
                 },
                 "slug": {
                     "type": "string"
+                },
+                "webhook_url": {
+                    "type": "string"
                 }
             }
         },
@@ -683,6 +830,36 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "slug": {
+                    "type": "string"
+                },
+                "webhook_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "wallet.DepositRequest": {
+            "type": "object",
+            "required": [
+                "amount",
+                "channel",
+                "currency",
+                "user_id"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "string"
+                },
+                "channel": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "metadata": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "user_id": {
                     "type": "string"
                 }
             }

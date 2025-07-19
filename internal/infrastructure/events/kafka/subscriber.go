@@ -5,21 +5,22 @@ import (
 	"log"
 )
 
-func StartTokenPriceConsumer(broker string) {
-	reader := NewReader(broker, TopicTokenPriceUpdated, "dexly-alert-engine")
-
+// Subscribe starts a consumer for the given topic and groupID, calling handler for each message.
+func Subscribe(ctx context.Context, broker, topic, groupID string, handler func(key, value []byte)) error {
+	reader := NewReader(broker, topic, groupID)
 	go func() {
+		defer reader.Close()
 		for {
-			msg, err := reader.ReadMessage(context.Background())
+			m, err := reader.ReadMessage(ctx)
 			if err != nil {
-				log.Println("Kafka consumer error:", err)
+				if ctx.Err() != nil {
+					return // context cancelled
+				}
+				log.Printf("Kafka read error: %v", err)
 				continue
 			}
-			go handleTokenPriceUpdate(msg.Key, msg.Value)
+			handler(m.Key, m.Value)
 		}
 	}()
-}
-
-func handleTokenPriceUpdate(key, value []byte) {
-	log.Printf("Received token price update: %s", value)
+	return nil
 }

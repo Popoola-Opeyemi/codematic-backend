@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"codematic/internal/config"
 	"codematic/internal/infrastructure/cache"
 	"codematic/internal/shared/model"
 	"codematic/internal/shared/utils"
@@ -11,8 +10,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-var logger = config.GetLogger()
-
+// JWTMiddleware enforces authentication for protected routes only (not for login endpoints).
+// Use this middleware on routes that require a valid JWT (i.e., after login).
 func JWTMiddleware(jwtManager *utils.JWTManager,
 	cacheManager cache.CacheManager) fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -47,11 +46,13 @@ func JWTMiddleware(jwtManager *utils.JWTManager,
 		c.Locals("user_id", claims.UserID)
 		c.Locals("token_id", claims.ID)
 		c.Locals("claims", claims)
+		c.Locals("role", claims.Role)
 		return c.Next()
 	}
 }
 
-// TenantMiddleware extracts tenant from X-Tenant-ID header and sets it in context
+// TenantMiddleware extracts tenant from X-Tenant-ID header and sets it in context.
+// Use this only for APIs that expect tenant ID in headers (not used for login, where tenant ID is in the body).
 func TenantMiddleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		tenantID := c.Get("X-Tenant-ID")
@@ -73,7 +74,8 @@ func TenantMiddleware() fiber.Handler {
 	}
 }
 
-// RoleMiddleware enforces that the user has one of the required roles
+// RoleMiddleware enforces that the user has one of the required roles.
+// Use this middleware after JWTMiddleware to restrict access to users with specific roles (e.g., TENANT_ADMIN, PLATFORM_ADMIN).
 func RoleMiddleware(allowedRoles ...string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		claims, ok := c.Locals("claims").(*model.Claims)

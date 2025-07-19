@@ -51,7 +51,6 @@ func main() {
 	broker := os.Getenv("KAFKA_BROKER")
 	kafkaProducer := kafka.NewKafkaProducer(broker)
 	events.Init(kafkaProducer)
-	kafka.StartTokenPriceConsumer(broker)
 
 	// App environment
 	app := router.InitRouterWithConfig(cfg, redisCache, zapLogger.Logger)
@@ -67,6 +66,7 @@ func main() {
 		providers,
 		JWTManager,
 		cacheManager,
+		kafkaProducer,
 	)
 
 	router.InitHandlers(env, []handler.IHandler{

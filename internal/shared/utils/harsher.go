@@ -1,6 +1,12 @@
 package utils
 
-import "golang.org/x/crypto/bcrypt"
+import (
+	"crypto/hmac"
+	"crypto/sha512"
+	"encoding/hex"
+
+	"golang.org/x/crypto/bcrypt"
+)
 
 func HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 12)
@@ -9,4 +15,10 @@ func HashPassword(password string) (string, error) {
 
 func CheckPasswordHash(password, hash string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
+}
+
+func ComputeHMACSHA512(data []byte, secret string) string {
+	mac := hmac.New(sha512.New, []byte(secret))
+	mac.Write(data)
+	return hex.EncodeToString(mac.Sum(nil))
 }

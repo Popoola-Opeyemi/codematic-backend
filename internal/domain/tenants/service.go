@@ -47,7 +47,7 @@ func (s *tenantService) GetTenantByID(ctx context.Context,
 
 func (s *tenantService) CreateTenant(ctx context.Context,
 	req CreateTenantRequest) (Tenant, error) {
-	dbTenant, err := s.Repo.CreateTenant(ctx, req.Name, req.Slug)
+	dbTenant, err := s.Repo.CreateTenant(ctx, req.Name, req.Slug, req.WebhookURL)
 	if err != nil {
 		return Tenant{}, err
 	}
@@ -72,8 +72,8 @@ func (s *tenantService) GetTenantBySlug(ctx context.Context,
 }
 
 func (s *tenantService) UpdateTenant(ctx context.Context,
-	id, name, slug string) (Tenant, error) {
-	dbTenant, err := s.Repo.UpdateTenant(ctx, id, name, slug)
+	id, name, slug, webhookURL string) (Tenant, error) {
+	dbTenant, err := s.Repo.UpdateTenant(ctx, id, name, slug, webhookURL)
 	if err != nil {
 		return Tenant{}, err
 	}

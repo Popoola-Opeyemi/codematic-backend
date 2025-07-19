@@ -9,6 +9,7 @@ import (
 
 type Service interface {
 	Deposit(ctx context.Context, data DepositForm) error
+	InitiateDeposit(ctx context.Context, data DepositRequest) (string, error)
 	Withdraw(ctx context.Context, data WithdrawalForm) error
 	Transfer(ctx context.Context, data TransferForm) error
 	GetBalance(ctx context.Context, walletID string) (decimal.Decimal, error)
@@ -26,6 +27,7 @@ type Repository interface {
 	CreateWalletsForNewUserFromAvailableWallets(ctx context.Context,
 		userID string) ([]*Wallet, error)
 	GetWallet(ctx context.Context, walletID string) (*Wallet, error)
+	GetWalletByUserAndCurrency(ctx context.Context, userID string, currency string) (*Wallet, error)
 	UpdateWalletBalance(ctx context.Context, walletID string,
 		amount decimal.Decimal) error
 	CreateTransaction(ctx context.Context, tx *Transaction) error

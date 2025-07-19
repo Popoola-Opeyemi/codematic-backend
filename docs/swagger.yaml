@@ -12,7 +12,6 @@ definitions:
     required:
     - email
     - password
-    - tenant_id
     type: object
   auth.SignupRequest:
     properties:
@@ -35,7 +34,6 @@ definitions:
     - last_name
     - password
     - phone
-    - tenant_id
     type: object
   model.ErrorResponse:
     properties:
@@ -51,6 +49,8 @@ definitions:
         type: string
       slug:
         type: string
+      webhook_url:
+        type: string
     required:
     - id
     - slug
@@ -63,6 +63,27 @@ definitions:
         type: string
       slug:
         type: string
+      webhook_url:
+        type: string
+    type: object
+  wallet.DepositRequest:
+    properties:
+      amount:
+        type: string
+      channel:
+        type: string
+      currency:
+        type: string
+      metadata:
+        additionalProperties: true
+        type: object
+      user_id:
+        type: string
+    required:
+    - amount
+    - channel
+    - currency
+    - user_id
     type: object
   wallet.Transaction:
     properties:
@@ -105,11 +126,11 @@ info:
   title: Codematic API
   version: "1.0"
 paths:
-  /auth/login:
+  /auth/admin:
     post:
       consumes:
       - application/json
-      description: Authenticates a user and returns tokens
+      description: Authenticates a platform admin and returns tokens
       parameters:
       - description: Login request
         in: body
@@ -127,7 +148,33 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/model.ErrorResponse'
-      summary: Login a user
+      summary: Login a platform admin
+      tags:
+      - auth
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a tenant user and returns tokens. TenantID must be
+        provided in the request body.
+      parameters:
+      - description: Login request
+        in: body
+        name: loginRequest
+        required: true
+        schema:
+          $ref: '#/definitions/auth.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Login a tenant user (regular or tenant admin)
       tags:
       - auth
   /auth/signup:
@@ -390,6 +437,36 @@ paths:
       summary: Deposit funds into a wallet
       tags:
       - wallet
+  /wallet/initiate-deposit:
+    post:
+      consumes:
+      - application/json
+      description: Initiates a deposit with full validation and provider integration
+      parameters:
+      - description: Deposit request
+        in: body
+        name: depositRequest
+        required: true
+        schema:
+          $ref: '#/definitions/wallet.DepositRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Initiate a deposit with provider integration
+      tags:
+      - wallet
   /wallet/transfer:
     post:
       consumes:
@@ -418,35 +495,6 @@ paths:
               type: string
             type: object
       summary: Transfer funds between wallets
-      tags:
-      - wallet
-  /wallet/webhook/{provider}:
-    post:
-      consumes:
-      - application/json
-      description: Processes webhook events from any payment provider
-      parameters:
-      - description: Provider code
-        in: path
-        name: provider
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Handle provider webhook
       tags:
       - wallet
   /wallet/withdraw:
@@ -479,4 +527,74 @@ paths:
       summary: Withdraw funds from a wallet
       tags:
       - wallet
+  /webhook/{provider}:
+    post:
+      consumes:
+      - application/json
+      description: Processes webhook events from any payment provider
+      parameters:
+      - description: Provider code
+        in: path
+        name: provider
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Handle provider webhook
+      tags:
+      - webhook
+  /webhook/replay/{id}:
+    post:
+      consumes:
+      - application/json
+      description: Replays a previously failed webhook event by its ID
+      parameters:
+      - description: Webhook Event ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Replay a webhook event
+      tags:
+      - webhook
 swagger: "2.0"

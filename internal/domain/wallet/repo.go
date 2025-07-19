@@ -207,3 +207,26 @@ func (r *walletRepository) CreateWalletsForNewUserFromAvailableWallets(ctx conte
 
 	return wallets, nil
 }
+
+func (r *walletRepository) GetWalletByUserAndCurrency(ctx context.Context, userID string, currency string) (*Wallet, error) {
+	userUUID, err := utils.StringToPgUUID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	w, err := r.q.GetWalletByUserAndCurrency(ctx, db.GetWalletByUserAndCurrencyParams{
+		UserID:   userUUID,
+		Currency: currency,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &Wallet{
+		ID:        w.ID.String(),
+		UserID:    w.UserID.String(),
+		Balance:   w.Balance,
+		CreatedAt: w.CreatedAt.Time,
+		UpdatedAt: w.UpdatedAt.Time,
+	}, nil
+}

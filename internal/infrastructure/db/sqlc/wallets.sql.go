@@ -122,6 +122,34 @@ func (q *Queries) GetWalletByID(ctx context.Context, id pgtype.UUID) (Wallet, er
 	return i, err
 }
 
+const getWalletByUserAndCurrency = `-- name: GetWalletByUserAndCurrency :one
+SELECT w.id, w.user_id, w.wallet_type_id, w.balance, w.status, w.created_at, w.updated_at
+FROM wallets w
+JOIN wallet_types wt ON w.wallet_type_id = wt.id
+WHERE w.user_id = $1 AND wt.currency = $2
+LIMIT 1
+`
+
+type GetWalletByUserAndCurrencyParams struct {
+	UserID   pgtype.UUID
+	Currency string
+}
+
+func (q *Queries) GetWalletByUserAndCurrency(ctx context.Context, arg GetWalletByUserAndCurrencyParams) (Wallet, error) {
+	row := q.db.QueryRow(ctx, getWalletByUserAndCurrency, arg.UserID, arg.Currency)
+	var i Wallet
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.WalletTypeID,
+		&i.Balance,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getWalletTypeIDByCurrency = `-- name: GetWalletTypeIDByCurrency :one
 SELECT id
 FROM wallet_types

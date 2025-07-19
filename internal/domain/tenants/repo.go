@@ -26,7 +26,7 @@ func (r *repository) WithTx(q *db.Queries) Repository {
 }
 
 func (r *repository) CreateTenant(ctx context.Context,
-	name string, slug string) (db.Tenant, error) {
+	name string, slug string, webhookURL string) (db.Tenant, error) {
 	uid := uuid.New().String()
 	uuid, err := utils.StringToPgUUID(uid)
 	if err != nil {
@@ -34,9 +34,10 @@ func (r *repository) CreateTenant(ctx context.Context,
 	}
 
 	arg := db.CreateTenantParams{
-		ID:   uuid,
-		Name: name,
-		Slug: slug,
+		ID:         uuid,
+		Name:       name,
+		Slug:       slug,
+		WebhookUrl: webhookURL,
 	}
 	return r.q.CreateTenant(ctx, arg)
 }
@@ -58,16 +59,17 @@ func (r *repository) ListTenants(ctx context.Context) ([]db.Tenant, error) {
 	return r.q.ListTenants(ctx)
 }
 
-func (r *repository) UpdateTenant(ctx context.Context, id, name, slug string) (
+func (r *repository) UpdateTenant(ctx context.Context, id, name, slug, webhookURL string) (
 	db.Tenant, error) {
 	uuid, err := utils.StringToPgUUID(id)
 	if err != nil {
 		return db.Tenant{}, nil
 	}
 	arg := db.UpdateTenantParams{
-		ID:   uuid,
-		Name: name,
-		Slug: slug,
+		ID:         uuid,
+		Name:       name,
+		Slug:       slug,
+		WebhookUrl: webhookURL,
 	}
 	return r.q.UpdateTenant(ctx, arg)
 }

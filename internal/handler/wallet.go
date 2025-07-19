@@ -3,6 +3,7 @@ package handler
 import (
 	"codematic/internal/domain/idempotency"
 	"codematic/internal/domain/provider"
+	"codematic/internal/domain/user"
 	"codematic/internal/domain/wallet"
 	"codematic/internal/middleware"
 	"codematic/internal/shared/model"
@@ -23,9 +24,11 @@ func (h *Wallet) Init(basePath string, env *Environment) error {
 
 	idempotencyRepo := idempotency.NewRepository(env.DB.Queries, env.DB.Pool)
 	providerService := provider.NewService(env.DB, env.CacheManager, env.Logger, env.KafkaProducer)
+	userService := user.NewService(env.DB, env.JWTManager, env.Logger)
 
 	h.service = wallet.NewService(
 		providerService,
+		userService,
 		env.DB,
 		env.Logger,
 		env.KafkaProducer,
@@ -42,12 +45,59 @@ func (h *Wallet) Init(basePath string, env *Environment) error {
 
 	// Add idempotency middleware to transaction-creating routes
 	protected.Post("/deposit", idm.Handle, h.Deposit)
+	protected.Post("/initiate-deposit", idm.Handle, h.InitiateDeposit)
 	protected.Post("/withdraw", idm.Handle, h.Withdraw)
 	protected.Post("/transfer", idm.Handle, h.Transfer)
 	protected.Post("/get-balance", h.GetBalance)
 	protected.Post("/get-transactions", h.GetTransactions)
 
 	return nil
+}
+
+// InitiateDeposit godoc
+// @Summary      Initiate a deposit with provider integration
+// @Description  Initiates a deposit with full validation and provider integration
+// @Tags         wallet
+// @Accept       json
+// @Produce      json
+// @Param        depositRequest  body  wallet.DepositRequest  true  "Deposit request"
+// @Success      200  {object}  map[string]string
+// @Failure      400  {object}  map[string]string
+// @Router       /wallet/initiate-deposit [post]
+func (h *Wallet) InitiateDeposit(c *fiber.Ctx) error {
+	var req wallet.DepositRequest
+
+	if err := c.BodyParser(&req); err != nil {
+		return utils.SendErrorResponse(c,
+			fiber.StatusBadRequest,
+			model.ErrInvalidInputError.Error(),
+		)
+	}
+
+	if err := validate.Struct(&req); err != nil {
+		return utils.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
+	}
+
+	// Set the user ID from JWT token
+	req.UserID = utils.ExtractUserIDFromJWT(c)
+	if req.UserID == "" {
+		return utils.SendErrorResponse(c, fiber.StatusUnauthorized, "User ID not found in token")
+	}
+
+	ctx := context.Background()
+	reference, err := h.service.InitiateDeposit(ctx, req)
+	if err != nil {
+		return utils.SendErrorResponse(c,
+			fiber.StatusBadRequest,
+			err.Error(),
+		)
+	}
+
+	return utils.SendSuccessResponse(c, fiber.StatusOK, fiber.Map{
+		"status":    "pending",
+		"reference": reference,
+		"message":   "Deposit initiated successfully. Please complete the payment with the provider.",
+	})
 }
 
 // Deposit godoc
@@ -68,6 +118,10 @@ func (h *Wallet) Deposit(c *fiber.Ctx) error {
 			fiber.StatusBadRequest,
 			model.ErrInvalidInputError.Error(),
 		)
+	}
+
+	if err := validate.Struct(&req); err != nil {
+		return utils.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
 	}
 
 	amount, err := decimal.NewFromString(req.Amount)

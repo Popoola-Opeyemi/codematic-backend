@@ -8,11 +8,10 @@ import (
 
 type (
 	DepositRequest struct {
-		UserID   string                 `json:"user_id"`
-		TenantID string                 `json:"tenant_id"`
-		WalletID string                 `json:"wallet_id"`
-		Amount   string                 `json:"amount"`
-		Provider string                 `json:"provider"`
+		UserID   string                 `json:"user_id" validate:"required"`
+		Amount   string                 `json:"amount" validate:"required,numeric"`
+		Currency string                 `json:"currency" validate:"required,uppercase,len=3"`
+		Channel  string                 `json:"channel" validate:"required"`
 		Metadata map[string]interface{} `json:"metadata"`
 	}
 
@@ -22,6 +21,7 @@ type (
 		WalletID string                 `json:"wallet_id"`
 		Amount   decimal.Decimal        `json:"amount"`
 		Provider string                 `json:"provider"`
+		Channel  string                 `json:"channel"`
 		Metadata map[string]interface{} `json:"metadata"`
 	}
 

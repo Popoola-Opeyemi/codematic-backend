@@ -37,11 +37,11 @@ func InitRedis(config *config.Config) *redis.Client {
 	return redisClient
 }
 
-// NewRedisCacheManager initializes the Redis client, session store, and nonce store, and returns a CacheManager.
 func NewRedisCacheManager(rc *redis.Client) CacheManager {
 
 	logger := config.InitLogger().Logger
 	return NewCacheManager(
 		NewRedisSessionStore(rc, logger),
+		NewRedisProviderCacheStore(rc, logger),
 	)
 }

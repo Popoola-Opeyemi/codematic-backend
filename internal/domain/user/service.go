@@ -51,6 +51,10 @@ func (s *userService) GetUserByEmailAndTenantID(ctx context.Context, email strin
 	return s.Repo.GetUserByEmailAndTenantID(ctx, email, tenantID)
 }
 
+func (s *userService) GetUserByID(ctx context.Context, userID string) (dbsqlc.User, error) {
+	return s.Repo.GetUserByID(ctx, userID)
+}
+
 func (s *userService) CreateUser(ctx context.Context, req *CreateUserRequest) (dbsqlc.User, error) {
 	// Email validation
 	email := req.Email

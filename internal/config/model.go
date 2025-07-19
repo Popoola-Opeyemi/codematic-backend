@@ -17,4 +17,7 @@ type Config struct {
 	JwtTokenRefreshExpiry int64  `mapstructure:"JWT_TOKEN_REFRESH_EXPIRY"`
 	JwtTokenExpiry        int64  `mapstructure:"JWT_TOKEN_EXPIRY"`
 	EnableDBQueryLogging  bool   `mapstructure:"ENABLE_DB_QUERY_LOGGING"`
+
+	PstkSecretHash string `mapstructure:"PSTK_SECRET_HASH"`
+	FlwSecretHash  string `mapstructure:"FLW_SECRET_HASH"`
 }

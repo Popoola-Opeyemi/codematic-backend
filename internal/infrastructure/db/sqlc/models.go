@@ -51,11 +51,12 @@ type Provider struct {
 }
 
 type Tenant struct {
-	ID        pgtype.UUID
-	Name      string
-	Slug      string
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
+	ID         pgtype.UUID
+	Name       string
+	Slug       string
+	WebhookUrl string
+	CreatedAt  pgtype.Timestamptz
+	UpdatedAt  pgtype.Timestamptz
 }
 
 type Transaction struct {

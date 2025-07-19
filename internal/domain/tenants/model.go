@@ -4,26 +4,30 @@ import db "codematic/internal/infrastructure/db/sqlc"
 
 type (
 	CreateTenantRequest struct {
-		Name string `json:"id" validate:"required"`
-		Slug string `json:"slug" validate:"required"`
+		Name       string `json:"id" validate:"required"`
+		Slug       string `json:"slug" validate:"required"`
+		WebhookURL string `json:"webhook_url"`
 	}
 
 	CreateTenantResponse struct {
-		ID string `json:"id"`
+		ID         string `json:"id"`
+		WebhookURL string `json:"webhook_url"`
 	}
 
 	Tenant struct {
-		ID   string `json:"id"`
-		Name string `json:"name"`
-		Slug string `json:"slug" `
+		ID         string `json:"id"`
+		Name       string `json:"name"`
+		Slug       string `json:"slug" `
+		WebhookURL string `json:"webhook_url"`
 	}
 )
 
 func toDomainTenant(dbTenant db.Tenant) Tenant {
 	return Tenant{
-		ID:   dbTenant.ID.String(),
-		Name: dbTenant.Name,
-		Slug: dbTenant.Slug,
+		ID:         dbTenant.ID.String(),
+		Name:       dbTenant.Name,
+		Slug:       dbTenant.Slug,
+		WebhookURL: dbTenant.WebhookUrl,
 	}
 }
 

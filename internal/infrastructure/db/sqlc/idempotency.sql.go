@@ -11,12 +11,54 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createIdempotencyKey = `-- name: CreateIdempotencyKey :exec
+INSERT INTO idempotency_keys (
+  id,
+  tenant_id,
+  user_id,
+  idempotency_key,
+  endpoint,
+  request_hash,
+  response_body,
+  status_code
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8
+)
+ON CONFLICT (tenant_id, idempotency_key, endpoint) DO NOTHING
+`
+
+type CreateIdempotencyKeyParams struct {
+	ID             pgtype.UUID
+	TenantID       pgtype.UUID
+	UserID         pgtype.UUID
+	IdempotencyKey string
+	Endpoint       string
+	RequestHash    string
+	ResponseBody   []byte
+	StatusCode     pgtype.Int4
+}
+
+func (q *Queries) CreateIdempotencyKey(ctx context.Context, arg CreateIdempotencyKeyParams) error {
+	_, err := q.db.Exec(ctx, createIdempotencyKey,
+		arg.ID,
+		arg.TenantID,
+		arg.UserID,
+		arg.IdempotencyKey,
+		arg.Endpoint,
+		arg.RequestHash,
+		arg.ResponseBody,
+		arg.StatusCode,
+	)
+	return err
+}
+
 const getIdempotencyRecord = `-- name: GetIdempotencyRecord :one
 SELECT id, tenant_id, user_id, idempotency_key, endpoint, request_hash, response_body, status_code, created_at, updated_at FROM idempotency_keys
 WHERE tenant_id = $1
   AND idempotency_key = $2
   AND endpoint = $3
   AND request_hash = $4
+LIMIT 1
 `
 
 type GetIdempotencyRecordParams struct {
@@ -49,41 +91,33 @@ func (q *Queries) GetIdempotencyRecord(ctx context.Context, arg GetIdempotencyRe
 	return i, err
 }
 
-const saveIdempotencyRecord = `-- name: SaveIdempotencyRecord :one
-INSERT INTO idempotency_keys (
-  id, tenant_id, user_id, idempotency_key, endpoint, request_hash, response_body, status_code, created_at, updated_at
-) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, now(), now()
-)
-ON CONFLICT (tenant_id, idempotency_key, endpoint)
-DO UPDATE SET
-  response_body = EXCLUDED.response_body,
-  status_code = EXCLUDED.status_code,
+const updateIdempotencyKeyResponse = `-- name: UpdateIdempotencyKeyResponse :one
+UPDATE idempotency_keys
+SET
+  response_body = $1,
+  status_code = $2,
   updated_at = now()
+WHERE tenant_id = $3
+  AND idempotency_key = $4
+  AND endpoint = $5
 RETURNING id, tenant_id, user_id, idempotency_key, endpoint, request_hash, response_body, status_code, created_at, updated_at
 `
 
-type SaveIdempotencyRecordParams struct {
-	ID             pgtype.UUID
-	TenantID       pgtype.UUID
-	UserID         pgtype.UUID
-	IdempotencyKey string
-	Endpoint       string
-	RequestHash    string
+type UpdateIdempotencyKeyResponseParams struct {
 	ResponseBody   []byte
 	StatusCode     pgtype.Int4
+	TenantID       pgtype.UUID
+	IdempotencyKey string
+	Endpoint       string
 }
 
-func (q *Queries) SaveIdempotencyRecord(ctx context.Context, arg SaveIdempotencyRecordParams) (IdempotencyKey, error) {
-	row := q.db.QueryRow(ctx, saveIdempotencyRecord,
-		arg.ID,
-		arg.TenantID,
-		arg.UserID,
-		arg.IdempotencyKey,
-		arg.Endpoint,
-		arg.RequestHash,
+func (q *Queries) UpdateIdempotencyKeyResponse(ctx context.Context, arg UpdateIdempotencyKeyResponseParams) (IdempotencyKey, error) {
+	row := q.db.QueryRow(ctx, updateIdempotencyKeyResponse,
 		arg.ResponseBody,
 		arg.StatusCode,
+		arg.TenantID,
+		arg.IdempotencyKey,
+		arg.Endpoint,
 	)
 	var i IdempotencyKey
 	err := row.Scan(

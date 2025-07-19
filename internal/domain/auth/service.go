@@ -55,7 +55,7 @@ func NewService(
 	}
 }
 
-func (s *authService) servicesWithTx(q *dbsqlc.Queries) (user.Service, wallet.Service) {
+func (s *authService) externalServicesWithTx(q *dbsqlc.Queries) (user.Service, wallet.Service) {
 	return s.userService.WithTx(q), s.walletService.WithTx(q)
 }
 
@@ -71,7 +71,7 @@ func (s *authService) Signup(ctx context.Context, req *SignupRequest) (User, err
 			return errors.New("invalid tenant")
 		}
 
-		userTx, walletTx := s.servicesWithTx(q)
+		userTx, walletTx := s.externalServicesWithTx(q)
 
 		userReq := &user.CreateUserRequest{
 			TenantID: tenant.ID,
@@ -188,6 +188,83 @@ func (s *authService) Login(ctx context.Context, req *LoginRequest,
 	}, nil
 }
 
+// AdminLogin authenticates a platform admin and returns tokens
+func (s *authService) AdminLogin(ctx context.Context, req *LoginRequest,
+	sessionInfo model.UserSessionInfo) (interface{}, error) {
+	email := strings.ToLower(strings.TrimSpace(req.Email))
+
+	user, err := s.userService.GetUserByEmail(ctx, email)
+	if err != nil || !user.IsActive.Bool {
+		return nil, errors.New(model.InvalidCredentials)
+	}
+
+	if !utils.CheckPasswordHash(req.Password, user.PasswordHash) {
+		return nil, errors.New(model.InvalidCredentials)
+	}
+
+	if user.Role.String != model.RolePlatformAdmin.String() {
+		return nil, errors.New("not an admin user")
+	}
+
+	existingTokenID, err := s.cacheManager.GetTokenIDForUser(ctx, user.ID.String())
+	var session *model.UserSessionInfo
+	if err == nil && existingTokenID != "" {
+		session, _ = s.cacheManager.GetSession(ctx, existingTokenID)
+		_ = s.cacheManager.DeleteSession(ctx, existingTokenID)
+	}
+
+	tokenID := uuid.New().String()
+	jwtData := model.JWTData{
+		UserID:   user.ID.String(),
+		Email:    user.Email,
+		TenantID: "",
+		TokenID:  tokenID,
+		Role:     user.Role.String,
+	}
+
+	jwt, err := s.JwtManager.GenerateJWT(jwtData)
+	if err != nil {
+		return nil, errors.New("failed to generate token")
+	}
+
+	refresh, err := s.JwtManager.GenerateRefreshToken(jwtData)
+	if err != nil {
+		return nil, errors.New("failed to generate refresh token")
+	}
+
+	var sessionToStore model.UserSessionInfo
+	if session != nil {
+		sessionToStore = *session
+		sessionToStore.TokenID = tokenID
+		sessionToStore.LoginTime = time.Now()
+		sessionToStore.LastSeen = time.Now()
+		sessionToStore.IsActive = true
+	} else {
+		sessionToStore = sessionInfo
+		sessionToStore.UserID = user.ID.String()
+		sessionToStore.TokenID = tokenID
+		sessionToStore.LoginTime = time.Now()
+		sessionToStore.LastSeen = time.Now()
+		sessionToStore.IsActive = true
+	}
+
+	s.cacheManager.SetSession(ctx, tokenID, &sessionToStore, utils.SessionExpiry)
+
+	return LoginResponse{
+		Auth: JwtAuthData{
+			AccessToken:  jwt,
+			RefreshToken: refresh,
+			ExpiresIn:    int(utils.SessionExpiry.Seconds()),
+			TokenType:    "Bearer",
+		},
+		User: User{
+			ID:    user.ID.String(),
+			Email: user.Email,
+			Role:  user.Role.String,
+		},
+	}, nil
+}
+
 func (s *authService) RefreshToken(ctx context.Context, refreshToken string) (JwtAuthData, error) {
 	claims, err := s.JwtManager.VerifyRefreshToken(refreshToken)
 	if err != nil {
@@ -198,7 +275,7 @@ func (s *authService) RefreshToken(ctx context.Context, refreshToken string) (Jw
 		UserID:   claims.UserID,
 		Email:    claims.Email,
 		TenantID: claims.TenantID,
-		TokenID:  claims.ID, // Use ID from RegisteredClaims
+		TokenID:  claims.ID,
 		Role:     claims.Role,
 	}
 

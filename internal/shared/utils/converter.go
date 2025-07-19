@@ -46,6 +46,10 @@ func ToPgxInt2(val int16) pgtype.Int2 {
 	return pgtype.Int2{Int16: val, Valid: true}
 }
 
+func ToPgxInt4(val int32) pgtype.Int4 {
+	return pgtype.Int4{Int32: val, Valid: true}
+}
+
 // OpenAPIToGo converts OpenAPI JSON data to a Go struct
 func OpenAPIToGo(data []byte, target interface{}) error {
 	// First unmarshal into a map to handle OpenAPI specific formats
@@ -190,8 +194,11 @@ func ToUUID(id uuid.UUID) pgtype.UUID {
 	return pgtype.UUID{Bytes: [16]byte(id), Valid: true}
 }
 
-func FromPgUUID(id pgtype.UUID) uuid.UUID {
-	return uuid.UUID(id.Bytes)
+func FromPgUUID(id pgtype.UUID) string {
+	if !id.Valid {
+		return ""
+	}
+	return uuid.UUID(id.Bytes).String()
 }
 
 func ParseUUID(id string) (uuid.UUID, error) {
@@ -251,6 +258,22 @@ func FromPgText(t pgtype.Text) *string {
 	return &t.String
 }
 
+// FromPgTimestamptz converts pgtype.Timestamptz to time.Time
+func FromPgTimestamptz(t pgtype.Timestamptz) time.Time {
+	if !t.Valid {
+		return time.Time{}
+	}
+	return t.Time
+}
+
+// StringOrEmpty returns the string value or empty string if nil
+func StringOrEmpty(ptr *string) string {
+	if ptr == nil {
+		return ""
+	}
+	return *ptr
+}
+
 // Convert row types to Customer type
 
 // Customer conversion function
@@ -278,13 +301,6 @@ func NullInt64Ptr(i *int) sql.NullInt64 {
 		return sql.NullInt64{}
 	}
 	return sql.NullInt64{Int64: int64(*i), Valid: true}
-}
-
-func StringOrEmpty(ptr *string) string {
-	if ptr != nil {
-		return *ptr
-	}
-	return ""
 }
 
 // HashString returns the SHA256 hash of the input string as a hex string

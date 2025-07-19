@@ -1,78 +1,109 @@
 package webhook
 
 import (
+	"codematic/internal/config"
+	"codematic/internal/infrastructure/db"
+	"codematic/internal/shared/model"
+	"codematic/internal/shared/utils"
 	"context"
-	"encoding/json"
 	"errors"
-	"time"
-
-	"github.com/google/uuid"
+	"strings"
 )
 
-// Handler interface is defined in this package
 type service struct {
-	repo             Repository
-	providerRegistry map[string]Handler // provider name -> Handler
+	DB   *db.DBConn
+	Repo Repository
+
+	cfg *config.Config
 }
 
-func NewService(repo Repository, registry map[string]Handler) Service {
+func NewService(db *db.DBConn, cfg *config.Config) Service {
 	return &service{
-		repo:             repo,
-		providerRegistry: registry,
+		DB:   db,
+		Repo: NewRepository(db.Queries, db.Pool),
+
+		cfg: cfg,
 	}
 }
 
-func (s *service) ProcessWebhook(ctx context.Context, provider string, payload []byte) error {
-	handler, ok := s.providerRegistry[provider]
-	if !ok {
-		return errors.New("unknown provider")
-	}
-	// Parse provider-specific event (for demo, assume generic WebhookEvent)
-	var event WebhookEvent
-	if err := json.Unmarshal(payload, &event); err != nil {
-		return err
-	}
-	// Idempotency check
-	existing, err := s.repo.GetByProviderAndEventID(ctx, event.ProviderID, event.ProviderEventID)
-	if err == nil && existing != nil {
-		return nil // already processed
-	}
-	event.ID = uuid.New()
-	event.Status = "received"
-	event.CreatedAt = time.Now()
-	event.UpdatedAt = time.Now()
-	if err := s.repo.Create(ctx, &event); err != nil {
-		return err
-	}
-	err = handler.HandleWebhookEvent(ctx, &event)
-	status := "processed"
-	var lastError *string
-	if err != nil {
-		msg := err.Error()
-		lastError = &msg
-		status = "failed"
-	}
-	s.repo.UpdateStatus(ctx, event.ID, status, event.Attempts+1, lastError)
-	return err
+func (s *service) ProcessWebhook(
+	ctx context.Context,
+	providerCode string,
+	headers map[string]string,
+	payload []byte,
+) error {
+
+	// err := s.VerifyWebhookSignature(providerCode, headers, payload)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// // 4. Extract webhook event ID (implement per provider)
+	// eventID, err := extractWebhookEventID(providerCode, payload)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// // 5. Check if already processed (idempotency)
+	// exists, err := s.DB.WebhookEventRepo.Exists(ctx, provider.ID, eventID)
+	// if err != nil {
+	// 	return err
+	// }
+	// if exists {
+	// 	return nil // already processed, skip
+	// }
+
+	// // 6. Save raw event to DB
+	// err = s.DB.WebhookEventRepo.Save(ctx, &model.WebhookEvent{
+	// 	ProviderID: provider.ID,
+	// 	EventID:    eventID,
+	// 	Payload:    payload,
+	// 	Status:     "pending",
+	// 	Attempts:   0,
+	// })
+	// if err != nil {
+	// 	return err
+	// }
+
+	// 7. Optionally enqueue to async processor
+	// s.queue.Enqueue(eventID)
+
+	return nil
 }
 
-func (s *service) ReplayWebhook(ctx context.Context, id uuid.UUID) error {
-	event, err := s.repo.GetByID(ctx, id)
-	if err != nil || event == nil {
-		return errors.New("event not found")
+func (s *service) ReplayWebhook(ctx context.Context, id string) error {
+	return nil
+}
+
+// VerifyWebhookSignature verifies the webhook signature based on the provider
+func (s *service) VerifyWebhookSignature(
+	provider string,
+	headers map[string]string,
+	payload []byte,
+) error {
+	switch strings.ToLower(provider) {
+	case "paystack":
+		secret := s.cfg.PstkSecretHash
+		if secret == "" {
+			return errors.New("missing paystack secret key")
+		}
+		hash := utils.ComputeHMACSHA512(payload, secret)
+		if hash != headers["x-paystack-signature"] {
+			return model.ErrInvalidSignature
+		}
+
+	case "flutterwave":
+		expected := s.cfg.FlwSecretHash
+		if expected == "" {
+			return errors.New("missing FLW_SECRET_HASH in environment")
+		}
+		if headers["flutterwave-signature"] != expected {
+			return model.ErrInvalidSignature
+		}
+
+	default:
+		return errors.New("unsupported provider for signature verification")
 	}
-	handler, ok := s.providerRegistry[event.ProviderID.String()]
-	if !ok {
-		return errors.New("unknown provider")
-	}
-	err = handler.HandleWebhookEvent(ctx, event)
-	status := "processed"
-	var lastError *string
-	if err != nil {
-		msg := err.Error()
-		lastError = &msg
-		status = "failed"
-	}
-	s.repo.UpdateStatus(ctx, event.ID, status, event.Attempts+1, lastError)
-	return err
+
+	return nil
 }

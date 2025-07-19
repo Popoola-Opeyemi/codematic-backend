@@ -1,22 +1,19 @@
 package cache
 
-import "context"
-
 type CacheManager interface {
 	SessionStore
-	GetTokenIDForUser(ctx context.Context, userID string) (string, error)
+	ProviderCacheStore
 }
 
 type unifiedCacheManager struct {
 	SessionStore
+	ProviderCacheStore
 }
 
-func NewCacheManager(sessionStore SessionStore) CacheManager {
+func NewCacheManager(sessionStore SessionStore,
+	providerCacheStore ProviderCacheStore) CacheManager {
 	return &unifiedCacheManager{
-		SessionStore: sessionStore,
+		SessionStore:       sessionStore,
+		ProviderCacheStore: providerCacheStore,
 	}
-}
-
-func (u *unifiedCacheManager) GetTokenIDForUser(ctx context.Context, userID string) (string, error) {
-	return u.SessionStore.GetTokenIDForUser(ctx, userID)
 }

@@ -16,4 +16,6 @@ var (
 	ErrInvalidEmailFormat                  = errors.New("invalid email format")
 	ErrPasswordTooShort                    = errors.New("password too short (min 8 chars)")
 	ErrUnsupportedProvider                 = errors.New("unsupported provider")
+
+	ErrInvalidSignature = errors.New("invalid webhook signature")
 )

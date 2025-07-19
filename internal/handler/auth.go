@@ -29,7 +29,7 @@ func (h *Auth) Init(basePath string, env *Environment) error {
 	tenantService := tenants.NewService(env.DB, env.JWTManager, env.Logger)
 	providerService := provider.NewService(env.DB, env.CacheManager, env.Logger, env.KafkaProducer)
 
-	walletService := wallet.NewService(providerService, env.DB, env.Logger, env.KafkaProducer)
+	walletService := wallet.NewService(providerService, userService, env.DB, env.Logger, env.KafkaProducer)
 
 	h.service = auth.NewService(
 		env.DB,

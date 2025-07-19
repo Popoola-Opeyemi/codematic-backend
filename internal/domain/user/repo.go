@@ -76,3 +76,28 @@ func (r *userRepository) GetUserByEmailAndTenantID(ctx context.Context,
 	return user, nil
 
 }
+
+func (r *userRepository) GetUserByID(ctx context.Context, userID string) (db.User, error) {
+	uuidUser, err := utils.StringToPgUUID(userID)
+	if err != nil {
+		return db.User{}, err
+	}
+
+	data, err := r.q.GetUserByID(ctx, uuidUser)
+	if err != nil {
+		return db.User{}, err
+	}
+
+	user := db.User{
+		ID:           data.ID,
+		TenantID:     data.TenantID,
+		Email:        data.Email,
+		Phone:        data.Phone,
+		PasswordHash: data.PasswordHash,
+		Role:         data.Role,
+		IsActive:     data.IsActive,
+		CreatedAt:    data.CreatedAt,
+		UpdatedAt:    data.UpdatedAt,
+	}
+	return user, nil
+}

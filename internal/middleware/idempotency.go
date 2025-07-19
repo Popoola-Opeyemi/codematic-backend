@@ -1,84 +1,61 @@
 package middleware
 
 import (
-	"bytes"
-	db "codematic/internal/infrastructure/db/sqlc"
+	"codematic/internal/domain/idempotency"
 	"codematic/internal/shared/utils"
 	"encoding/json"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type IdempotencyMiddleware struct {
-	DB *db.Queries
+	Repo idempotency.Repository
 }
 
-func NewIdempotencyMiddleware(db *db.Queries) *IdempotencyMiddleware {
-	return &IdempotencyMiddleware{DB: db}
+func NewIdempotencyMiddleware(repo idempotency.Repository) *IdempotencyMiddleware {
+	return &IdempotencyMiddleware{Repo: repo}
 }
 
 func (m *IdempotencyMiddleware) Handle(c *fiber.Ctx) error {
 	key := c.Get("Idempotency-Key")
 	if key == "" {
-
-		return utils.SendErrorResponse(c, fiber.StatusBadRequest, "missing Idempotency-Key header")
+		return utils.SendErrorResponse(c, fiber.StatusBadRequest, "Missing Idempotency-Key header")
 	}
 
 	tenantID := c.Get("X-Tenant-ID")
 	if tenantID == "" {
-		return utils.SendErrorResponse(c, fiber.StatusBadRequest, "missing X-Tenant-ID header")
+		return utils.SendErrorResponse(c, fiber.StatusBadRequest, "Missing X-Tenant-ID header")
 	}
 
 	endpoint := c.OriginalURL()
 	requestHash := utils.HashRequestBody(c.Body())
 
-	tid, err := utils.StringToPgUUID(tenantID)
-	if err != nil {
-		return utils.SendErrorResponse(c, fiber.StatusInternalServerError, "could not parse tenant ID")
-	}
-
-	// Check for existing idempotency record
-	record, err := m.DB.GetIdempotencyRecord(c.Context(), db.GetIdempotencyRecordParams{
-		TenantID:       tid,
-		IdempotencyKey: key,
-		Endpoint:       endpoint,
-		RequestHash:    requestHash,
-	})
-	if err == nil && record.ID.Valid {
-		// Found: return saved response
+	// Try to find an existing idempotency record
+	record, err := m.Repo.Get(c.Context(), tenantID, key, endpoint, requestHash)
+	if err == nil && record != nil && record.ID.Valid && record.RequestHash == requestHash {
 		var resp map[string]interface{}
 		_ = json.Unmarshal(record.ResponseBody, &resp)
 		return c.Status(int(record.StatusCode.Int32)).JSON(resp)
 	}
 
-	var buf bytes.Buffer
-
-	c.Response().SetBodyStream(&buf, -1)
+	// Proceed to handler
 	if err := c.Next(); err != nil {
 		return err
 	}
 
+	// After handler logic, cache the response
 	status := c.Response().StatusCode()
 
-	body := buf.Bytes()
-	if len(body) == 0 {
-		body = c.Response().Body()
-	}
+	var responseMap map[string]interface{}
+	_ = json.Unmarshal(c.Response().Body(), &responseMap)
 
-	id := uuid.New()
-
-	pgID, _ := utils.StringToPgUUID(id.String())
-	_, _ = m.DB.SaveIdempotencyRecord(c.Context(), db.SaveIdempotencyRecordParams{
-		ID:             pgID,
-		TenantID:       tid,
-		UserID:         pgtype.UUID{},
-		IdempotencyKey: key,
-		Endpoint:       endpoint,
-		RequestHash:    requestHash,
-		ResponseBody:   body,
-		StatusCode:     pgtype.Int4{Int32: int32(status), Valid: true},
+	_, _ = m.Repo.UpdateResponse(c.Context(), idempotency.UpdateResponseParams{
+		TenantID:     tenantID,
+		Key:          key,
+		Endpoint:     endpoint,
+		ResponseBody: responseMap,
+		StatusCode:   status,
 	})
+
 	return nil
 }

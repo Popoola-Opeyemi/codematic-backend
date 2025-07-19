@@ -1,5 +1,6 @@
 package kafka
 
+// Kafka topic names
 const (
-	TopicWebhook = ""
+	WalletDepositSuccessTopic = "wallet.deposit.success"
 )

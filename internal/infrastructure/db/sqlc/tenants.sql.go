@@ -12,24 +12,31 @@ import (
 )
 
 const createTenant = `-- name: CreateTenant :one
-INSERT INTO tenants (id, name, slug, created_at, updated_at)
-VALUES ($1, $2, $3, now(), now())
-RETURNING id, name, slug, created_at, updated_at
+INSERT INTO tenants (id, name, slug, webhook_url, created_at, updated_at)
+VALUES ($1, $2, $3, $4, NOW(), NOW())
+RETURNING id, name, slug, webhook_url, created_at, updated_at
 `
 
 type CreateTenantParams struct {
-	ID   pgtype.UUID
-	Name string
-	Slug string
+	ID         pgtype.UUID
+	Name       string
+	Slug       string
+	WebhookUrl string
 }
 
 func (q *Queries) CreateTenant(ctx context.Context, arg CreateTenantParams) (Tenant, error) {
-	row := q.db.QueryRow(ctx, createTenant, arg.ID, arg.Name, arg.Slug)
+	row := q.db.QueryRow(ctx, createTenant,
+		arg.ID,
+		arg.Name,
+		arg.Slug,
+		arg.WebhookUrl,
+	)
 	var i Tenant
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Slug,
+		&i.WebhookUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -37,8 +44,7 @@ func (q *Queries) CreateTenant(ctx context.Context, arg CreateTenantParams) (Ten
 }
 
 const deleteTenant = `-- name: DeleteTenant :exec
-DELETE FROM tenants
-WHERE id = $1
+DELETE FROM tenants WHERE id = $1
 `
 
 func (q *Queries) DeleteTenant(ctx context.Context, id pgtype.UUID) error {
@@ -47,8 +53,7 @@ func (q *Queries) DeleteTenant(ctx context.Context, id pgtype.UUID) error {
 }
 
 const getTenantByID = `-- name: GetTenantByID :one
-SELECT id, name, slug, created_at, updated_at FROM tenants
-WHERE id = $1
+SELECT id, name, slug, webhook_url, created_at, updated_at FROM tenants WHERE id = $1
 `
 
 func (q *Queries) GetTenantByID(ctx context.Context, id pgtype.UUID) (Tenant, error) {
@@ -58,6 +63,7 @@ func (q *Queries) GetTenantByID(ctx context.Context, id pgtype.UUID) (Tenant, er
 		&i.ID,
 		&i.Name,
 		&i.Slug,
+		&i.WebhookUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -65,8 +71,7 @@ func (q *Queries) GetTenantByID(ctx context.Context, id pgtype.UUID) (Tenant, er
 }
 
 const getTenantBySlug = `-- name: GetTenantBySlug :one
-SELECT id, name, slug, created_at, updated_at FROM tenants
-WHERE slug = $1
+SELECT id, name, slug, webhook_url, created_at, updated_at FROM tenants WHERE slug = $1
 `
 
 func (q *Queries) GetTenantBySlug(ctx context.Context, slug string) (Tenant, error) {
@@ -76,6 +81,7 @@ func (q *Queries) GetTenantBySlug(ctx context.Context, slug string) (Tenant, err
 		&i.ID,
 		&i.Name,
 		&i.Slug,
+		&i.WebhookUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -83,8 +89,7 @@ func (q *Queries) GetTenantBySlug(ctx context.Context, slug string) (Tenant, err
 }
 
 const listTenants = `-- name: ListTenants :many
-SELECT id, name, slug, created_at, updated_at FROM tenants
-ORDER BY created_at DESC
+SELECT id, name, slug, webhook_url, created_at, updated_at FROM tenants
 `
 
 func (q *Queries) ListTenants(ctx context.Context) ([]Tenant, error) {
@@ -100,6 +105,7 @@ func (q *Queries) ListTenants(ctx context.Context) ([]Tenant, error) {
 			&i.ID,
 			&i.Name,
 			&i.Slug,
+			&i.WebhookUrl,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -115,26 +121,31 @@ func (q *Queries) ListTenants(ctx context.Context) ([]Tenant, error) {
 
 const updateTenant = `-- name: UpdateTenant :one
 UPDATE tenants
-SET name = $2,
-    slug = $3,
-    updated_at = now()
+SET name = $2, slug = $3, webhook_url = $4, updated_at = NOW()
 WHERE id = $1
-RETURNING id, name, slug, created_at, updated_at
+RETURNING id, name, slug, webhook_url, created_at, updated_at
 `
 
 type UpdateTenantParams struct {
-	ID   pgtype.UUID
-	Name string
-	Slug string
+	ID         pgtype.UUID
+	Name       string
+	Slug       string
+	WebhookUrl string
 }
 
 func (q *Queries) UpdateTenant(ctx context.Context, arg UpdateTenantParams) (Tenant, error) {
-	row := q.db.QueryRow(ctx, updateTenant, arg.ID, arg.Name, arg.Slug)
+	row := q.db.QueryRow(ctx, updateTenant,
+		arg.ID,
+		arg.Name,
+		arg.Slug,
+		arg.WebhookUrl,
+	)
 	var i Tenant
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Slug,
+		&i.WebhookUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

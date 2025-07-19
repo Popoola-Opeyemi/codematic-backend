@@ -4,7 +4,7 @@ type (
 	LoginRequest struct {
 		Email    string `json:"email" validate:"required,email"`
 		Password string `json:"password" validate:"required,min=8"`
-		TenantID string `json:"tenant_id" validate:"required"`
+		TenantID string `json:"tenant_id" `
 	}
 
 	JwtAuthData struct {
@@ -34,7 +34,7 @@ type (
 		Email     string `json:"email" validate:"required,email"`
 		Phone     string `json:"phone" validate:"required"`
 		Password  string `json:"password" validate:"required,min=8"`
-		TenantID  string `json:"tenant_id" validate:"required"`
+		TenantID  string `json:"tenant_id"`
 	}
 
 	RefreshTokenRequest struct {

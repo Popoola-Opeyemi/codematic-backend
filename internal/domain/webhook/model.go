@@ -2,20 +2,18 @@ package webhook
 
 import (
 	"time"
-
-	"github.com/google/uuid"
 )
 
 type WebhookEvent struct {
-	ID              uuid.UUID
-	ProviderID      uuid.UUID
+	ID              string
+	ProviderID      string
 	ProviderEventID string
-	TenantID        uuid.UUID
+	TenantID        string
 	EventType       string
 	Payload         []byte
 	Status          string
 	Attempts        int
-	LastError       *string
+	LastError       string
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }
