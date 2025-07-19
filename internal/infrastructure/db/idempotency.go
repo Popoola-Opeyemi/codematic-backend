@@ -4,6 +4,7 @@ import (
 	"context"
 
 	dbsqlc "codematic/internal/infrastructure/db/sqlc"
+	"codematic/internal/shared/utils"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -13,12 +14,12 @@ import (
 func (db *DBConn) GetIdempotencyRecord(ctx context.Context, tenantID, key,
 	endpoint, requestHash string) (
 	record *dbsqlc.IdempotencyKey, found bool, err error) {
-	tid, err := uuid.Parse(tenantID)
+	tid, err := utils.StringToPgUUID(tenantID)
 	if err != nil {
 		return nil, false, err
 	}
 	params := dbsqlc.GetIdempotencyRecordParams{
-		TenantID:       pgtype.UUID{Bytes: tid, Valid: true},
+		TenantID:       tid,
 		IdempotencyKey: key,
 		Endpoint:       endpoint,
 		RequestHash:    requestHash,
@@ -36,21 +37,21 @@ func (db *DBConn) GetIdempotencyRecord(ctx context.Context, tenantID, key,
 // SaveIdempotencyRecord wraps the sqlc method and converts string IDs
 func (db *DBConn) SaveIdempotencyRecord(ctx context.Context, tenantID, userID,
 	key, endpoint, requestHash string, responseBody []byte, statusCode int) error {
-	tid, err := uuid.Parse(tenantID)
+	tid, err := utils.StringToPgUUID(tenantID)
 	if err != nil {
 		return err
 	}
 	var uid pgtype.UUID
 	if userID != "" {
-		u, err := uuid.Parse(userID)
+		u, err := utils.StringToPgUUID(userID)
 		if err == nil {
-			uid = pgtype.UUID{Bytes: u, Valid: true}
+			uid = u
 		}
 	}
 	id := uuid.New()
 	params := dbsqlc.SaveIdempotencyRecordParams{
 		ID:             pgtype.UUID{Bytes: id, Valid: true},
-		TenantID:       pgtype.UUID{Bytes: tid, Valid: true},
+		TenantID:       tid,
 		UserID:         uid,
 		IdempotencyKey: key,
 		Endpoint:       endpoint,

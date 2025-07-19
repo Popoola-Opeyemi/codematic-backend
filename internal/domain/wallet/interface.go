@@ -17,6 +17,8 @@ type Service interface {
 		balance decimal.Decimal) (*Wallet, error)
 	GetWalletTypeIDByCurrency(ctx context.Context, currency string) (string, error)
 	CreateWalletsForUserByCurrencies(ctx context.Context, userID string, currencies []string) ([]*Wallet, error)
+	CreateWalletForNewUser(ctx context.Context,
+		userID string) ([]*Wallet, error)
 }
 
 type Repository interface {

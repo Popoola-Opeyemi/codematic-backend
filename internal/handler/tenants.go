@@ -59,6 +59,7 @@ func (h *Tenants) Init(basePath string, env *Environment) error {
 // @Router       /tenant/create [post]
 func (h *Tenants) Create(c *fiber.Ctx) error {
 	var req tenants.CreateTenantRequest
+
 	if err := c.BodyParser(&req); err != nil {
 		return utils.SendErrorResponse(c, fiber.StatusBadRequest,
 			model.ErrInvalidInputError.Error())
@@ -153,20 +154,26 @@ func (h *Tenants) List(c *fiber.Ctx) error {
 // @Router       /tenant/{id} [put]
 func (h *Tenants) Update(c *fiber.Ctx) error {
 	id := c.Params("id")
+
 	var req tenants.CreateTenantRequest
+
 	if err := c.BodyParser(&req); err != nil {
 		return utils.SendErrorResponse(c, fiber.StatusBadRequest, model.ErrInvalidInputError.Error())
 	}
+
 	if err := validate.Struct(&req); err != nil {
 		return utils.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
 	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
+
 	tenant, err := h.service.UpdateTenant(ctx, id, req.Name, req.Slug)
 	if err != nil {
 		h.env.Logger.Error("Failed to update tenant", zap.Error(err))
 		return utils.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
 	}
+
 	return utils.SendSuccessResponse(c, fiber.StatusOK, tenant)
 }
 
@@ -180,12 +187,16 @@ func (h *Tenants) Update(c *fiber.Ctx) error {
 // @Failure      400  {object}  model.ErrorResponse
 // @Router       /tenant/{id} [delete]
 func (h *Tenants) Delete(c *fiber.Ctx) error {
+
 	id := c.Params("id")
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
+
 	if err := h.service.DeleteTenant(ctx, id); err != nil {
 		h.env.Logger.Error("Failed to delete tenant", zap.Error(err))
 		return utils.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
 	}
+
 	return c.SendStatus(fiber.StatusNoContent)
 }
