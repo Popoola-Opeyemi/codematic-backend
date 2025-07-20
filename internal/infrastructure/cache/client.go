@@ -38,10 +38,37 @@ func InitRedis(config *config.Config) *redis.Client {
 }
 
 func NewRedisCacheManager(rc *redis.Client) CacheManager {
-
 	logger := config.InitLogger().Logger
 	return NewCacheManager(
 		NewRedisSessionStore(rc, logger),
 		NewRedisProviderCacheStore(rc, logger),
+		NewRedisWalletCacheStore(rc, logger),
+		NewRedisTransactionCacheStore(rc, logger),
 	)
+}
+
+type CacheManager interface {
+	SessionStore
+	ProviderCacheStore
+	WalletCacheStore
+	TransactionCacheStore
+}
+
+type unifiedCacheManager struct {
+	SessionStore
+	ProviderCacheStore
+	WalletCacheStore
+	TransactionCacheStore
+}
+
+func NewCacheManager(sessionStore SessionStore,
+	providerCacheStore ProviderCacheStore,
+	walletCacheStore WalletCacheStore,
+	transactionCacheStore TransactionCacheStore) CacheManager {
+	return &unifiedCacheManager{
+		SessionStore:          sessionStore,
+		ProviderCacheStore:    providerCacheStore,
+		WalletCacheStore:      walletCacheStore,
+		TransactionCacheStore: transactionCacheStore,
+	}
 }

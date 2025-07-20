@@ -59,6 +59,7 @@ func InitServices(
 		userService,
 		store,
 		kafkaProducer,
+		cacheManager,
 	)
 
 	authService := auth.NewService(

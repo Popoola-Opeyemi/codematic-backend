@@ -10,6 +10,7 @@ import (
 	"codematic/internal/domain/provider"
 	"codematic/internal/domain/provider/gateways"
 	"codematic/internal/domain/user"
+	"codematic/internal/infrastructure/cache"
 	"codematic/internal/infrastructure/db"
 	dbsqlc "codematic/internal/infrastructure/db/sqlc"
 	"codematic/internal/infrastructure/events/kafka"
@@ -29,6 +30,8 @@ type WalletService struct {
 
 	logger   *zap.Logger
 	Producer *kafka.KafkaProducer
+
+	Cache cache.WalletCacheStore
 }
 
 func NewService(
@@ -36,7 +39,9 @@ func NewService(
 	Provider provider.Service,
 	User user.Service,
 	db *db.DBConn,
-	producer *kafka.KafkaProducer) Service {
+	producer *kafka.KafkaProducer,
+	cacheStore cache.WalletCacheStore, // Add cache param
+) Service {
 	return &WalletService{
 		DB:       db,
 		Repo:     NewRepository(db.Queries, db.Pool),
@@ -44,6 +49,7 @@ func NewService(
 		User:     User,
 		logger:   logger,
 		Producer: producer,
+		Cache:    cacheStore, // Set cache
 	}
 }
 
@@ -173,6 +179,10 @@ func (s *WalletService) Withdraw(ctx context.Context, data WithdrawalForm) error
 		if err := repo.UpdateWalletBalance(ctx, wallet.ID, wallet.Balance); err != nil {
 			return err
 		}
+		if s.Cache != nil {
+			_ = s.Cache.SetWalletBalance(ctx, wallet.ID, wallet.Balance.InexactFloat64(), 5*time.Minute)
+			_ = s.Cache.DeleteWalletTransactions(ctx, wallet.ID)
+		}
 
 		tx := &Transaction{
 			ID:        uuid.NewString(),
@@ -235,6 +245,12 @@ func (s *WalletService) Transfer(ctx context.Context, data TransferForm) error {
 		if err := repo.UpdateWalletBalance(ctx, to.ID, to.Balance); err != nil {
 			return err
 		}
+		if s.Cache != nil {
+			_ = s.Cache.SetWalletBalance(ctx, data.FromWalletID, from.Balance.InexactFloat64(), 5*time.Minute)
+			_ = s.Cache.SetWalletBalance(ctx, data.ToWalletID, to.Balance.InexactFloat64(), 5*time.Minute)
+			_ = s.Cache.DeleteWalletTransactions(ctx, data.FromWalletID)
+			_ = s.Cache.DeleteWalletTransactions(ctx, data.ToWalletID)
+		}
 
 		tx := &Transaction{
 			ID:        uuid.NewString(),
@@ -268,18 +284,40 @@ func (s *WalletService) CreateWallet(ctx context.Context, userID,
 	return s.Repo.CreateWallet(ctx, userID, walletTypeID, balance)
 }
 
-func (s *WalletService) GetBalance(ctx context.Context,
-	walletID string) (decimal.Decimal, error) {
-	w, err := s.Repo.GetWallet(ctx, walletID)
+func (s *WalletService) GetBalance(ctx context.Context, walletID string) (decimal.Decimal, error) {
+	// Try cache first
+	if s.Cache != nil {
+		if bal, err := s.Cache.GetWalletBalance(ctx, walletID); err == nil && bal != 0 {
+			return decimal.NewFromFloat(bal), nil
+		}
+	}
+	// Fallback to DB
+	wallet, err := s.Repo.GetWallet(ctx, walletID)
 	if err != nil {
 		return decimal.Zero, err
 	}
-	return w.Balance, nil
+	if s.Cache != nil {
+		_ = s.Cache.SetWalletBalance(ctx, walletID, wallet.Balance.InexactFloat64(), 5*time.Minute)
+	}
+	return wallet.Balance, nil
 }
 
-func (s *WalletService) GetTransactions(ctx context.Context,
-	walletID string, limit, offset int) ([]Transaction, error) {
-	return s.Repo.ListTransactions(ctx, walletID, limit, offset)
+func (s *WalletService) GetTransactions(ctx context.Context, walletID string, limit, offset int) ([]Transaction, error) {
+	var txns []Transaction
+	if s.Cache != nil {
+		err := s.Cache.GetWalletTransactions(ctx, walletID, &txns)
+		if err == nil && len(txns) > 0 {
+			return txns, nil
+		}
+	}
+	txns, err := s.Repo.ListTransactions(ctx, walletID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	if s.Cache != nil {
+		_ = s.Cache.SetWalletTransactions(ctx, walletID, txns, 5*time.Minute)
+	}
+	return txns, nil
 }
 
 func (s *WalletService) GetWalletTypeIDByCurrency(ctx context.Context,

@@ -30,14 +30,16 @@ type RedisProviderCacheStore struct {
 	logger *zap.Logger
 }
 
-func NewRedisProviderCacheStore(client *redis.Client, logger *zap.Logger) ProviderCacheStore {
+func NewRedisProviderCacheStore(client *redis.Client,
+	logger *zap.Logger) ProviderCacheStore {
 	return &RedisProviderCacheStore{
 		client: client,
 		logger: logger,
 	}
 }
 
-func (r *RedisProviderCacheStore) SetProviderCache(ctx context.Context, provider *db.Provider) error {
+func (r *RedisProviderCacheStore) SetProviderCache(ctx context.Context,
+	provider *db.Provider) error {
 	if provider == nil {
 		return nil
 	}
@@ -107,12 +109,14 @@ func (r *RedisProviderCacheStore) GetProviderCacheByCode(ctx context.Context, co
 	return &provider, nil
 }
 
-func (r *RedisProviderCacheStore) InvalidateProviderCache(ctx context.Context, id, code string) error {
+func (r *RedisProviderCacheStore) InvalidateProviderCache(ctx context.Context,
+	id, code string) error {
 	idKey := fmt.Sprintf(providerCacheKeyByID, id)
 	codeKey := fmt.Sprintf(providerCacheKeyByCode, code)
 
 	if err := r.client.Del(ctx, idKey, codeKey).Err(); err != nil {
-		r.logger.Error("Failed to invalidate provider cache", zap.Error(err), zap.String("id", id), zap.String("code", code))
+		r.logger.Error("Failed to invalidate provider cache", zap.Error(err),
+			zap.String("id", id), zap.String("code", code))
 		return err
 	}
 	return nil
