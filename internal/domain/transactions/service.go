@@ -6,11 +6,13 @@ import (
 	"time"
 )
 
+// service implements the business logic for transaction-related operations.
 type service struct {
 	repo  Repository
 	cache cache.TransactionCacheStore
 }
 
+// NewService initializes and returns a new instance of the transaction service.
 func NewService(
 	repo Repository,
 	cacheStore cache.TransactionCacheStore,

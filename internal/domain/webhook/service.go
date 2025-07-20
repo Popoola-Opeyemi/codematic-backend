@@ -93,7 +93,6 @@ func (s *service) handlePaystackEvent(
 ) error {
 	s.logger.Sugar().Infof("Paystack event received: %+v", event)
 
-	// Extract event type as key if available
 	key := ""
 	if evt, ok := event["event"]; ok {
 		if str, ok := evt.(string); ok {
@@ -168,7 +167,9 @@ func getHeader(headers map[string]string, key string) string {
 func (s *service) StartWalletDepositSuccessConsumer(ctx context.Context,
 	broker string) {
 	go func() {
+
 		groupID := "webhook-wallet-deposit-success-group"
+
 		err := kafka.Subscribe(ctx, broker, kafka.WalletDepositSuccessTopic, groupID, func(key, value []byte) {
 			s.logger.Sugar().Infof("Received wallet deposit success event: %s", string(value))
 
@@ -215,7 +216,7 @@ func (s *service) StartWalletDepositSuccessConsumer(ctx context.Context,
 				webhookEvent.Status = "failed"
 				webhookEvent.Attempts++
 				webhookEvent.UpdatedAt = time.Now()
-				s.Repo.Create(ctx, webhookEvent) // Optionally update status
+				s.Repo.Create(ctx, webhookEvent)
 				return
 			}
 			defer resp.Body.Close()
@@ -226,7 +227,7 @@ func (s *service) StartWalletDepositSuccessConsumer(ctx context.Context,
 			}
 			webhookEvent.Attempts++
 			webhookEvent.UpdatedAt = time.Now()
-			s.Repo.Create(ctx, webhookEvent) // Optionally update status
+			s.Repo.Create(ctx, webhookEvent)
 		})
 		if err != nil {
 			s.logger.Sugar().Errorf("Failed to subscribe to wallet deposit success events: %v", err)

@@ -21,6 +21,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// WalletService implements the business logic for wallet-related operations.
 type WalletService struct {
 	DB   *db.DBConn
 	Repo Repository
@@ -34,13 +35,14 @@ type WalletService struct {
 	Cache cache.WalletCacheStore
 }
 
+// NewService initializes and returns a new instance of the wallet service.
 func NewService(
 	logger *zap.Logger,
 	Provider provider.Service,
 	User user.Service,
 	db *db.DBConn,
 	producer *kafka.KafkaProducer,
-	cacheStore cache.WalletCacheStore, // Add cache param
+	cacheStore cache.WalletCacheStore,
 ) Service {
 	return &WalletService{
 		DB:       db,
@@ -49,7 +51,7 @@ func NewService(
 		User:     User,
 		logger:   logger,
 		Producer: producer,
-		Cache:    cacheStore, // Set cache
+		Cache:    cacheStore,
 	}
 }
 
@@ -203,7 +205,7 @@ func (s *WalletService) Withdraw(ctx context.Context, data WithdrawalForm) error
 		withdrawal := &Withdrawal{
 			UserID:        data.UserID,
 			TransactionID: tx.ID,
-			ExternalTxID:  tx.Reference, // or use a provider reference if available
+			ExternalTxID:  tx.Reference,
 			Amount:        data.Amount.InexactFloat64(),
 			Status:        StatusCompleted,
 			CreatedAt:     time.Now(),
@@ -281,7 +283,9 @@ func (s *WalletService) CreateWalletForNewUser(ctx context.Context,
 
 func (s *WalletService) CreateWallet(ctx context.Context, userID,
 	walletTypeID string, balance decimal.Decimal) (*Wallet, error) {
+
 	return s.Repo.CreateWallet(ctx, userID, walletTypeID, balance)
+
 }
 
 func (s *WalletService) GetBalance(ctx context.Context, walletID string) (decimal.Decimal, error) {
@@ -291,38 +295,49 @@ func (s *WalletService) GetBalance(ctx context.Context, walletID string) (decima
 			return decimal.NewFromFloat(bal), nil
 		}
 	}
+
 	// Fallback to DB
 	wallet, err := s.Repo.GetWallet(ctx, walletID)
 	if err != nil {
 		return decimal.Zero, err
 	}
+
 	if s.Cache != nil {
 		_ = s.Cache.SetWalletBalance(ctx, walletID, wallet.Balance.InexactFloat64(), 5*time.Minute)
 	}
 	return wallet.Balance, nil
 }
 
-func (s *WalletService) GetTransactions(ctx context.Context, walletID string, limit, offset int) ([]Transaction, error) {
+func (s *WalletService) GetTransactions(ctx context.Context, walletID string,
+	limit, offset int) ([]Transaction, error) {
+
 	var txns []Transaction
+
 	if s.Cache != nil {
 		err := s.Cache.GetWalletTransactions(ctx, walletID, &txns)
 		if err == nil && len(txns) > 0 {
 			return txns, nil
 		}
 	}
+
 	txns, err := s.Repo.ListTransactions(ctx, walletID, limit, offset)
 	if err != nil {
 		return nil, err
 	}
+
 	if s.Cache != nil {
 		_ = s.Cache.SetWalletTransactions(ctx, walletID, txns, 5*time.Minute)
 	}
+
 	return txns, nil
+
 }
 
 func (s *WalletService) GetWalletTypeIDByCurrency(ctx context.Context,
 	currency string) (string, error) {
+
 	return s.Repo.GetWalletTypeIDByCurrency(ctx, currency)
+
 }
 
 func (s *WalletService) HandlePaystackKafkaEvent(ctx context.Context, key, value []byte) {
@@ -330,6 +345,7 @@ func (s *WalletService) HandlePaystackKafkaEvent(ctx context.Context, key, value
 
 	// Parse the Paystack event payload
 	var event map[string]interface{}
+
 	if err := json.Unmarshal(value, &event); err != nil {
 		s.logger.Sugar().Errorf("Failed to parse Paystack event: %v", err)
 		return
@@ -341,6 +357,7 @@ func (s *WalletService) HandlePaystackKafkaEvent(ctx context.Context, key, value
 		s.logger.Sugar().Errorf("Paystack event missing data field")
 		return
 	}
+
 	reference, ok := data["reference"].(string)
 	if !ok || reference == "" {
 		s.logger.Sugar().Errorf("Paystack event missing reference")
@@ -353,6 +370,7 @@ func (s *WalletService) HandlePaystackKafkaEvent(ctx context.Context, key, value
 		s.logger.Sugar().Errorf("Failed to verify Paystack transaction: %v", err)
 		return
 	}
+
 	if verifyResp.Status != "success" {
 		s.logger.Sugar().Errorf("Paystack transaction not successful: status=%s", verifyResp.Status)
 		return
@@ -370,19 +388,23 @@ func (s *WalletService) HandlePaystackKafkaEvent(ctx context.Context, key, value
 	}
 
 	// Update wallet balance and mark transaction as completed
-	amount := decimal.NewFromInt(verifyResp.Amount).Div(decimal.NewFromInt(100)) // Paystack amount is in kobo
+	amount := decimal.NewFromInt(verifyResp.Amount).Div(decimal.NewFromInt(100))
+
 	err = s.withTx(ctx, func(repo Repository) error {
 		wallet, err := repo.GetWallet(ctx, tx.WalletID)
 		if err != nil {
 			return err
 		}
+
 		wallet.Balance = wallet.Balance.Add(amount)
 		if err := repo.UpdateWalletBalance(ctx, wallet.ID, wallet.Balance); err != nil {
 			return err
 		}
+
 		if err := repo.UpdateTransactionStatusAndAmount(ctx, tx.ID, StatusCompleted, amount); err != nil {
 			return err
 		}
+
 		// Update deposit status to completed
 		if err := repo.UpdateDepositStatus(ctx, tx.ID, StatusCompleted); err != nil {
 			s.logger.Sugar().Errorf("Failed to update deposit status for transaction %s: %v", tx.ID, err)

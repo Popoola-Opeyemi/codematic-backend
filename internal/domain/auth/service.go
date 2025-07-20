@@ -33,6 +33,7 @@ type authService struct {
 	logger        *zap.Logger
 }
 
+// NewService initializes and returns a new instance of the auth service.
 func NewService(
 	db *db.DBConn,
 	userService user.Service,
@@ -55,6 +56,7 @@ func NewService(
 	}
 }
 
+// / externalServicesWithTx returns user and wallet services bound to a transaction.
 func (s *authService) externalServicesWithTx(q *dbsqlc.Queries) (user.Service, wallet.Service) {
 	return s.userService.WithTx(q), s.walletService.WithTx(q)
 }
@@ -112,6 +114,7 @@ func (s *authService) Signup(ctx context.Context, req *SignupRequest) (User, err
 	return result, nil
 }
 
+// Login authenticates a user, manages session caching, and returns JWT tokens
 func (s *authService) Login(ctx context.Context, req *LoginRequest,
 	sessionInfo model.UserSessionInfo) (interface{}, error) {
 
@@ -265,6 +268,7 @@ func (s *authService) AdminLogin(ctx context.Context, req *LoginRequest,
 	}, nil
 }
 
+// RefreshToken generates a new access and refresh token pair from a valid refresh token.
 func (s *authService) RefreshToken(ctx context.Context, refreshToken string) (JwtAuthData, error) {
 	claims, err := s.JwtManager.VerifyRefreshToken(refreshToken)
 	if err != nil {
@@ -297,6 +301,20 @@ func (s *authService) RefreshToken(ctx context.Context, refreshToken string) (Jw
 	}, nil
 }
 
+// Logout handles user logout
 func (s *authService) Logout(ctx context.Context, userId string) error {
+	tokenID, err := s.cacheManager.GetTokenIDForUser(ctx, userId)
+	if err != nil {
+		return errors.New("failed to get token id for user")
+	}
+
+	if tokenID == "" {
+		return errors.New("no active session found for user")
+	}
+
+	if err := s.cacheManager.DeleteSession(ctx, tokenID); err != nil {
+		return errors.New("failed to delete session")
+	}
+
 	return nil
 }

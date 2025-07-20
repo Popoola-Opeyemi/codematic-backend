@@ -15,6 +15,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// userService implements the business logic for user-related operations.
 type userService struct {
 	DB         *db.DBConn
 	Repo       Repository
@@ -22,6 +23,7 @@ type userService struct {
 	logger     *zap.Logger
 }
 
+// NewService initializes and returns a new instance of the user service.
 func NewService(db *db.DBConn,
 	jwtManager *utils.JWTManager,
 	logger *zap.Logger,

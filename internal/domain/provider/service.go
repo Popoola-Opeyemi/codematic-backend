@@ -17,6 +17,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// providerService implements the business logic for provider-related operations.
 type providerService struct {
 	DB           *dbconn.DBConn
 	Repo         Repository
@@ -25,6 +26,7 @@ type providerService struct {
 	Producer     *kafka.KafkaProducer
 }
 
+// NewService initializes and returns a new instance of the provider service.
 func NewService(
 	db *dbconn.DBConn,
 	cacheManager cache.CacheManager,
@@ -178,15 +180,17 @@ func (s *providerService) verifyPaystackSignature(provider *db.Provider,
 }
 
 func (s *providerService) VerifyPaystackTransaction(ctx context.Context, reference string) (*gateways.VerifyResponse, error) {
-	// Find the best Paystack provider config (for now, just get by code)
 	provider, err := s.GetProviderByCode(ctx, "paystack")
 	if err != nil {
 		return nil, err
 	}
+
 	var cfg PaystackConfig
 	if err := json.Unmarshal(provider.Config, &cfg); err != nil {
 		return nil, err
 	}
+
 	gateway := gateways.NewPaystackProvider(s.Logger, cfg.BaseURL, cfg.SecretKey)
+
 	return gateway.VerifyTransaction(ctx, reference)
 }

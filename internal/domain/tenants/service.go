@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// tenantService implements the business logic for tenant-related operations.
 type tenantService struct {
 	DB         *db.DBConn
 	Repo       Repository
@@ -17,6 +18,7 @@ type tenantService struct {
 	logger     *zap.Logger
 }
 
+// NewService initializes and returns a new instance of the tenant service.
 func NewService(db *db.DBConn, jwtManager *utils.JWTManager,
 	logger *zap.Logger) Service {
 	return &tenantService{
