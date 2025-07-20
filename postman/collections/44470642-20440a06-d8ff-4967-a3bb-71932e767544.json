@@ -140,7 +140,7 @@
 							},
 							{
 								"key": "Idempotency-Key",
-								"value": "unique-key-12",
+								"value": "unique-key-13",
 								"type": "text"
 							},
 							{
@@ -524,94 +524,10 @@
 			"name": "transactions",
 			"item": [
 				{
-					"name": "list transactions",
-					"id": "44470642-12345678-9012-3456-789012345679",
-					"protocolProfileBehavior": {
-						"disableBodyPruning": true
-					},
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{jwt}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{API_BASE_URL}}/transactions?status=completed&limit=10&offset=0",
-							"host": [
-								"{{API_BASE_URL}}"
-							],
-							"path": [
-								"transactions"
-							],
-							"query": [
-								{
-									"key": "status",
-									"value": "completed"
-								},
-								{
-									"key": "limit",
-									"value": "10"
-								},
-								{
-									"key": "offset",
-									"value": "0"
-								}
-							]
-						}
-					},
-					"response": [
-						{
-							"id": "44470642-d2a01372-ce93-4bc5-ab5a-68a42e9b954d",
-							"name": "response",
-							"originalRequest": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "Bearer {{jwt}}",
-										"type": "text"
-									}
-								],
-								"url": {
-									"raw": "{{API_BASE_URL}}/transactions?status=completed&limit=10&offset=0",
-									"host": [
-										"{{API_BASE_URL}}"
-									],
-									"path": [
-										"transactions"
-									],
-									"query": [
-										{
-											"key": "status",
-											"value": "completed"
-										},
-										{
-											"key": "limit",
-											"value": "10"
-										},
-										{
-											"key": "offset",
-											"value": "0"
-										}
-									]
-								}
-							},
-							"_postman_previewlanguage": "Text",
-							"header": null,
-							"cookie": [],
-							"responseTime": null,
-							"body": null
-						}
-					]
-				},
-				{
 					"name": "get-single-transaction",
 					"id": "44470642-f55f9774-16e9-4632-b059-09b49525a9ef",
 					"request": {
-						"method": "POST",
+						"method": "GET",
 						"header": [
 							{
 								"key": "Authorization",
@@ -639,20 +555,94 @@
 							}
 						},
 						"url": {
-							"raw": "{{API_BASE_URL}}/wallet/initiate_deposit",
+							"raw": "{{API_BASE_URL}}/transactions/",
 							"host": [
 								"{{API_BASE_URL}}"
 							],
 							"path": [
-								"wallet",
-								"initiate_deposit"
+								"transactions",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "list-transactions",
+					"id": "44470642-b32d5b97-a9a3-4437-b71a-49b28433a734",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							},
+							{
+								"key": "Idempotency-Key",
+								"value": "unique-key-12",
+								"type": "text"
+							},
+							{
+								"key": "X-Tenant-ID",
+								"value": "{{tenant_id}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{API_BASE_URL}}/transactions?status=pending",
+							"host": [
+								"{{API_BASE_URL}}"
+							],
+							"path": [
+								"transactions"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "pending"
+								}
 							]
 						}
 					},
 					"response": []
 				}
 			],
-			"id": "44470642-12345678-9012-3456-78901234567a"
+			"id": "44470642-12345678-9012-3456-78901234567a",
+			"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+						"key": "token",
+						"value": "{{user_authorization}}",
+						"type": "string"
+					}
+				]
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"id": "9360a808-a165-4f44-97ee-5e082a248fac",
+						"type": "text/javascript",
+						"packages": {},
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"id": "e7d8b9b6-b299-46a7-9ffc-545a274de7bc",
+						"type": "text/javascript",
+						"packages": {},
+						"exec": [
+							""
+						]
+					}
+				}
+			]
 		}
 	],
 	"event": [
