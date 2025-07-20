@@ -99,7 +99,7 @@
 							},
 							{
 								"key": "Idempotency-Key",
-								"value": "unique-key-1",
+								"value": "unique-key-4",
 								"type": "text"
 							},
 							{
@@ -110,7 +110,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"amount\":\"8000\",\n  \"currency\":\"NGN\",\n  \"channel\":\"bank_transfer\"\n}",
+							"raw": "{\n  \"amount\":\"1000\",\n  \"currency\":\"NGN\",\n  \"channel\":\"bank_transfer\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
