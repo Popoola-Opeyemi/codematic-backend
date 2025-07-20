@@ -415,8 +415,21 @@
 						"disableBodyPruning": true
 					},
 					"request": {
-						"method": "GET",
-						"header": []
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "https://civil-shrew-subtle.ngrok-free.app/ai/webhook",
+							"protocol": "https",
+							"host": [
+								"civil-shrew-subtle",
+								"ngrok-free",
+								"app"
+							],
+							"path": [
+								"ai",
+								"webhook"
+							]
+						}
 					},
 					"response": []
 				}
