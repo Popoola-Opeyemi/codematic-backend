@@ -589,23 +589,13 @@
 								"type": "text"
 							}
 						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"amount\":\"4912\",\n  \"currency\":\"NGN\",\n  \"channel\":\"bank_transfer\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
 						"url": {
-							"raw": "{{API_BASE_URL}}/transactions/all",
+							"raw": "{{API_BASE_URL}}/transactions",
 							"host": [
 								"{{API_BASE_URL}}"
 							],
 							"path": [
-								"transactions",
-								"all"
+								"transactions"
 							]
 						}
 					},
