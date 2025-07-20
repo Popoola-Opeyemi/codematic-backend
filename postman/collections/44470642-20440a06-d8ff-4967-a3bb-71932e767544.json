@@ -519,6 +519,99 @@
 				}
 			],
 			"id": "44470642-df8b2f76-8935-4c8d-9ac9-867927176fa6"
+		},
+		{
+			"name": "transactions",
+			"item": [
+				{
+					"name": "get single transaction",
+					"id": "44470642-12345678-9012-3456-789012345678",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{API_BASE_URL}}/transactions/{{transaction_id}}",
+							"host": [
+								"{{API_BASE_URL}}"
+							],
+							"path": [
+								"transactions",
+								"{{transaction_id}}"
+							]
+						}
+					},
+					"response": [
+						{
+							"id": "{{transaction_id}}",
+							"status": "completed",
+							"amount": "100.00",
+							"type": "deposit"
+						}
+					]
+				},
+				{
+					"name": "list transactions",
+					"id": "44470642-12345678-9012-3456-789012345679",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{API_BASE_URL}}/transactions?status=completed&limit=10&offset=0",
+							"host": [
+								"{{API_BASE_URL}}"
+							],
+							"path": [
+								"transactions"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "completed"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"transactions": [
+								{
+									"id": "{{transaction_id}}",
+									"status": "completed",
+									"amount": "100.00",
+									"type": "deposit"
+								}
+							]
+						}
+					]
+				}
+			],
+			"id": "44470642-12345678-9012-3456-78901234567a"
 		}
 	],
 	"event": [
