@@ -73,6 +73,7 @@ func main() {
 		&handler.Auth{},
 		&handler.Tenants{},
 		&handler.Wallet{},
+		&handler.Webhook{},
 	})
 
 	// Graceful shutdown support

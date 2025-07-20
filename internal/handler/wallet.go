@@ -49,7 +49,7 @@ func (h *Wallet) Init(basePath string, env *Environment) error {
 	userOnly := protected.Use(utils.RequireRole(model.RoleUser))
 
 	// Add idempotency middleware to transaction-creating routes
-	userOnly.Post("/initiate-deposit", idm.Handle, h.InitiateDeposit)
+	userOnly.Post("/initiate_deposit", idm.Handle, h.InitiateDeposit)
 	userOnly.Post("/withdraw", idm.Handle, h.Withdraw)
 	userOnly.Post("/transfer", idm.Handle, h.Transfer)
 	userOnly.Post("/get-balance", h.GetBalance)
@@ -94,7 +94,8 @@ func (h *Wallet) InitiateDeposit(c *fiber.Ctx) error {
 	}
 
 	if !req.Channel.IsValid() {
-		return utils.SendErrorResponse(c, fiber.StatusBadRequest, "invalid channel")
+		return utils.SendErrorResponse(c, fiber.StatusBadRequest,
+			"invalid channel")
 	}
 
 	if err := validate.Struct(&req); err != nil {
@@ -103,12 +104,14 @@ func (h *Wallet) InitiateDeposit(c *fiber.Ctx) error {
 
 	userID := utils.ExtractUserIDFromJWT(c)
 	if userID == "" {
-		return utils.SendErrorResponse(c, fiber.StatusUnauthorized, "User ID not found in token")
+		return utils.SendErrorResponse(c, fiber.StatusUnauthorized,
+			"User ID not found in token")
 	}
 
 	userEmail := utils.ExtractUserEmailFromJWT(c)
 	if userEmail == "" {
-		return utils.SendErrorResponse(c, fiber.StatusUnauthorized, "User Email not found in token")
+		return utils.SendErrorResponse(c, fiber.StatusUnauthorized,
+			"User Email not found in token")
 	}
 
 	tenantID := utils.ExtractTenantFromJWT(c)

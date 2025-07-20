@@ -2,6 +2,9 @@ package paystack
 
 import (
 	"codematic/internal/thirdparty/baseclient"
+	"crypto/hmac"
+	"crypto/sha512"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -98,4 +101,13 @@ func (c *Client) authHeaders() map[string]string {
 
 func readResponseBody(body io.Reader) ([]byte, error) {
 	return io.ReadAll(body)
+}
+
+func GenerateSignature(secret string, body []byte) (string, error) {
+	mac := hmac.New(sha512.New, []byte(secret))
+	_, err := mac.Write(body)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(mac.Sum(nil)), nil
 }

@@ -21,9 +21,8 @@ type providerService struct {
 	DB           *dbconn.DBConn
 	Repo         Repository
 	cacheManager cache.CacheManager
-
-	Logger   *zap.Logger
-	Producer *kafka.KafkaProducer
+	Logger       *zap.Logger
+	Producer     *kafka.KafkaProducer
 }
 
 func NewService(
@@ -43,128 +42,137 @@ func NewService(
 
 func (s *providerService) InitiateDeposit(ctx context.Context,
 	req DepositRequest) (gateways.GatewayResponse, error) {
-
 	email, _ := req.Metadata["email"].(string)
-	s.Logger.Sugar().Info("User Email:", email)
-
-	var response gateways.GatewayResponse
 
 	providerRow, err := s.Repo.SelectBestProviderByCurrencyAndChannel(ctx, req.Currency, req.Channel)
 	if err != nil {
 		s.Logger.Error("No provider available", zap.Error(err))
-		return response, fmt.Errorf("no provider available for currency %s and channel %s", req.Currency, req.Channel)
+		return gateways.GatewayResponse{}, fmt.Errorf("no provider available for currency %s and channel %s", req.Currency, req.Channel)
 	}
 
-	s.Logger.Sugar().Info("Selected provider:", providerRow.Name)
-
-	// Get full provider with config
 	provider, err := s.GetProviderByID(ctx, providerRow.ID.String())
 	if err != nil {
 		s.Logger.Error("Failed to retrieve provider details", zap.Error(err))
-		return response, err
+		return gateways.GatewayResponse{}, err
 	}
 
-	switch strings.ToLower(provider.Code) {
-	case paystack.ProviderPaystack:
+	code := strings.ToLower(provider.Code)
 
-		s.Logger.Sugar().Info("Handling Paystack provider")
-
+	if code == paystack.ProviderPaystack {
 		var cfg PaystackConfig
 		if err := json.Unmarshal(provider.Config, &cfg); err != nil {
 			s.Logger.Error("Failed to decode paystack config", zap.Error(err))
-			return response, err
+			return gateways.GatewayResponse{}, err
 		}
 
 		gateway := gateways.NewPaystackProvider(s.Logger, cfg.BaseURL, cfg.SecretKey)
-
-		gatewayReq := gateways.DepositRequest{
+		return gateway.InitDeposit(ctx, gateways.DepositRequest{
 			Email:      email,
 			Amount:     req.Amount,
 			ProviderID: provider.ID.String(),
-		}
-
-		res, err := gateway.InitDeposit(ctx, gatewayReq)
-		if err != nil {
-			s.Logger.Error("Paystack InitDeposit failed", zap.Error(err))
-			return response, err
-		}
-		response = res
-
-	case flutterwave.ProviderFlutterwave:
-		return response, fmt.Errorf("flutterwave not yet implemented")
-
-	default:
-		return response, fmt.Errorf("unsupported provider: %s", provider.Code)
+		})
 	}
 
-	s.Logger.Sugar().Info("Paystack deposit initiated successfully", response)
+	if code == flutterwave.ProviderFlutterwave {
+		return gateways.GatewayResponse{}, fmt.Errorf("flutterwave not yet implemented")
+	}
 
-	return response, nil
+	return gateways.GatewayResponse{}, fmt.Errorf("unsupported provider: %s", provider.Code)
 }
 
-func (s *providerService) InitiateWithdrawal(ctx context.Context, req WithdrawalRequest) (string, error) {
+func (s *providerService) GetProviderByCode(ctx context.Context,
+	code string) (*db.Provider, error) {
+	code = strings.ToLower(code)
 
-	return "ref", nil
-}
-
-func (s *providerService) GetProviderByCode(ctx context.Context, code string) (*db.Provider, error) {
-	provider, err := s.cacheManager.GetProviderCacheByCode(ctx, code)
-	if err == nil && provider != nil {
+	if provider, err := s.cacheManager.GetProviderCacheByCode(ctx, code); err == nil && provider != nil {
 		return provider, nil
 	}
-	provider, err = s.Repo.GetByCode(ctx, code)
-	if err != nil || provider == nil {
-		return provider, err
+
+	provider, err := s.Repo.GetByCode(ctx, code)
+	if err != nil {
+		return nil, err
 	}
+
 	_ = s.cacheManager.SetProviderCache(ctx, provider)
 	return provider, nil
 }
 
-func (s *providerService) GetProviderByID(ctx context.Context, id string) (*db.Provider, error) {
-	provider, err := s.cacheManager.GetProviderCacheByID(ctx, id)
-	if err == nil && provider != nil {
-		s.Logger.Sugar().Info("Provider found in cache ", "id ", id)
+func (s *providerService) GetProviderByID(ctx context.Context,
+	id string) (*db.Provider, error) {
+
+	if provider, err := s.cacheManager.GetProviderCacheByID(ctx, id); err == nil && provider != nil {
 		return provider, nil
 	}
 
+	provider, err := s.Repo.GetByID(ctx, id)
 	if err != nil {
-		s.Logger.Warn("Cache lookup failed", zap.Error(err))
+		return nil, err
 	}
 
-	// Fallback to DB
-	provider, err = s.Repo.GetByID(ctx, id)
-	if err != nil || provider == nil {
-		return provider, err
-	}
-
-	// Populate cache
-	if cacheErr := s.cacheManager.SetProviderCache(ctx, provider); cacheErr != nil {
-		s.Logger.Warn("Failed to set provider in cache", zap.Error(cacheErr))
-	}
-
+	_ = s.cacheManager.SetProviderCache(ctx, provider)
 	return provider, nil
 }
 
 func (s *providerService) UpdateProvider(ctx context.Context,
 	arg db.UpdateProviderConfigParams) (*db.Provider, error) {
+
 	updated, err := s.Repo.Update(ctx, arg)
 	if err != nil {
-		s.Logger.Error("failed to update provider", zap.Error(err))
+		s.Logger.Error("Failed to update provider", zap.Error(err))
 		return nil, err
 	}
 
-	err = s.cacheManager.SetProviderCache(ctx, updated)
-	if err != nil {
-		s.Logger.Warn("failed to update provider cache", zap.Error(err))
+	if err := s.cacheManager.SetProviderCache(ctx, updated); err != nil {
+		s.Logger.Warn("Failed to update provider cache", zap.Error(err))
 	}
+
 	return updated, nil
 }
 
-func (s *providerService) InvalidateProviderCache(ctx context.Context, id, code string) {
+func (s *providerService) InvalidateProviderCache(ctx context.Context,
+	id, code string) {
 	_ = s.cacheManager.InvalidateProviderCache(ctx, id, code)
 
 	provider, err := s.Repo.GetByID(ctx, id)
 	if err == nil && provider != nil {
 		_ = s.cacheManager.SetProviderCache(ctx, provider)
 	}
+}
+
+func (s *providerService) VerifyWebhookSignature(
+	ctx context.Context,
+	providerCode, signatureHeader string,
+	body []byte,
+) (bool, error) {
+
+	provider, err := s.Repo.GetByCode(ctx, providerCode)
+	if err != nil {
+		s.Logger.Error("Failed to get provider", zap.Error(err))
+		return false, err
+	}
+
+	code := strings.ToLower(provider.Code)
+	if code == paystack.ProviderPaystack {
+		return s.verifyPaystackSignature(provider, body, signatureHeader)
+	}
+
+	if code == flutterwave.ProviderFlutterwave {
+		return false, fmt.Errorf("flutterwave webhook verification not implemented")
+	}
+
+	return false, fmt.Errorf("unsupported provider for webhook verification")
+}
+
+func (s *providerService) verifyPaystackSignature(provider *db.Provider,
+	body []byte, signatureHeader string) (bool, error) {
+
+	var cfg PaystackConfig
+	if err := json.Unmarshal(provider.Config, &cfg); err != nil {
+		s.Logger.Error("Failed to decode paystack config", zap.Error(err))
+		return false, err
+	}
+
+	gateway := gateways.NewPaystackProvider(s.Logger, cfg.BaseURL, cfg.SecretKey)
+
+	return gateway.VerifyWebhookSignature(body, signatureHeader)
 }

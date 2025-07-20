@@ -162,6 +162,27 @@ paths:
       summary: Login a tenant user (regular or tenant admin)
       tags:
       - auth
+  /auth/me:
+    get:
+      description: Returns details of the currently authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get current authenticated user
+      tags:
+      - auth
   /auth/signup:
     post:
       consumes:
@@ -485,41 +506,6 @@ paths:
               type: string
             type: object
       summary: Handle provider webhook
-      tags:
-      - webhook
-  /webhook/replay/{id}:
-    post:
-      consumes:
-      - application/json
-      description: Replays a previously failed webhook event by its ID
-      parameters:
-      - description: Webhook Event ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Replay a webhook event
       tags:
       - webhook
 swagger: "2.0"

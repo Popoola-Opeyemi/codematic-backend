@@ -5,11 +5,18 @@ import (
 )
 
 type Service interface {
-	ProcessWebhook(
-		ctx context.Context, providerCode string, headers map[string]string,
+	VerifyWebhookSignature(
+		ctx context.Context,
+		provider string,
+		headers map[string]string,
 		payload []byte,
 	) error
-	ReplayWebhook(ctx context.Context, id string) error
+	HandleWebhook(
+		ctx context.Context,
+		provider string,
+		headers map[string]string,
+		payload []byte,
+	) error
 }
 
 type Repository interface {

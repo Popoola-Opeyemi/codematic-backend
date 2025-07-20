@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"codematic/internal/domain/provider"
 	"codematic/internal/domain/webhook"
 	"codematic/internal/shared/model"
 
@@ -12,13 +13,24 @@ type Webhook struct {
 	env     *Environment
 }
 
-func (h *Webhook) Init(basePath string, env *Environment, service webhook.Service) error {
+func (h *Webhook) Init(basePath string, env *Environment) error {
+
+	providerService := provider.NewService(
+		env.DB, env.CacheManager,
+		env.Logger, env.KafkaProducer,
+	)
+
 	h.env = env
-	h.service = webhook.NewService(env.DB, env.Config)
+	h.service = webhook.NewService(
+		providerService,
+		env.Logger,
+		env.DB,
+		env.Config,
+		env.KafkaProducer,
+	)
 
 	group := env.Fiber.Group(basePath + "/webhook")
 	group.Post("/:provider", h.Receive)
-	group.Post("/replay/:id", h.Replay)
 
 	return nil
 }
@@ -43,7 +55,10 @@ func (h *Webhook) Receive(c *fiber.Ctx) error {
 		headers[string(key)] = string(val)
 	})
 
-	err := h.service.ProcessWebhook(c.Context(), provider, headers, payload)
+	h.env.Logger.Sugar().Info("payload", string(payload))
+	h.env.Logger.Sugar().Info("headers", headers)
+
+	err := h.service.HandleWebhook(c.Context(), provider, headers, payload)
 	if err != nil {
 		if err == model.ErrInvalidSignature {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": err.Error()})
@@ -65,12 +80,22 @@ func (h *Webhook) Receive(c *fiber.Ctx) error {
 // @Failure      400  {object}  map[string]string
 // @Failure      500  {object}  map[string]string
 // @Router       /webhook/replay/{id} [post]
-func (h *Webhook) Replay(c *fiber.Ctx) error {
-	idStr := c.Params("id")
+// func (h *Webhook) Replay(c *fiber.Ctx) error {
+// 	provider := c.Params("provider")
+// 	payload := c.Body()
 
-	if err := h.service.ReplayWebhook(c.Context(), idStr); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-	}
+// 	headers := map[string]string{}
+// 	c.Request().Header.VisitAll(func(key, val []byte) {
+// 		headers[string(key)] = string(val)
+// 	})
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": "webhook replayed"})
-}
+// 	err := h.service.ReplayWebhook(c.Context(), provider, headers, payload)
+// 	if err != nil {
+// 		if err == model.ErrInvalidSignature {
+// 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": err.Error()})
+// 		}
+// 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+// 	}
+
+// 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": "webhook replayed"})
+// }

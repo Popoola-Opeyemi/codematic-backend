@@ -9,7 +9,10 @@ import (
 type Service interface {
 	InitiateDeposit(ctx context.Context,
 		req DepositRequest) (gateways.GatewayResponse, error)
-	// InitiateWithdrawal(ctx context.Context, req WithdrawalRequest) (string, error)
+	GetProviderByCode(ctx context.Context, code string) (*db.Provider, error)
+	GetProviderByID(ctx context.Context, id string) (*db.Provider, error)
+	VerifyWebhookSignature(ctx context.Context, providerCode, signatureHeader string,
+		body []byte) (bool, error)
 }
 
 type Repository interface {

@@ -59,6 +59,9 @@ func (h *Auth) Init(basePath string, env *Environment) error {
 	protected.Post("/logout", h.Logout)
 	protected.Post("/refresh", h.RefreshToken)
 
+	// Add /auth/me endpoint
+	protected.Get("/me", h.Me)
+
 	return nil
 
 }
@@ -231,4 +234,25 @@ func (h *Auth) AdminLogin(c *fiber.Ctx) error {
 	}
 
 	return utils.SendSuccessResponse(c, 200, authResp)
+}
+
+// Me godoc
+// @Summary      Get current authenticated user
+// @Description  Returns details of the currently authenticated user
+// @Tags         auth
+// @Produce      json
+// @Success      200  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Router       /auth/me [get]
+func (h *Auth) Me(c *fiber.Ctx) error {
+	claims, ok := c.Locals("claims").(*model.Claims)
+	if !ok || claims == nil {
+		return utils.SendErrorResponse(c, fiber.StatusUnauthorized, "Unauthorized")
+	}
+	return utils.SendSuccessResponse(c, fiber.StatusOK, fiber.Map{
+		"user_id":   claims.UserID,
+		"email":     claims.Email,
+		"tenant_id": claims.TenantID,
+		"role":      claims.Role,
+	})
 }

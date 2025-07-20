@@ -2,108 +2,150 @@ package webhook
 
 import (
 	"codematic/internal/config"
+	"codematic/internal/domain/provider"
 	"codematic/internal/infrastructure/db"
+	"codematic/internal/infrastructure/events/kafka"
 	"codematic/internal/shared/model"
-	"codematic/internal/shared/utils"
+	"codematic/internal/thirdparty/flutterwave"
+	"codematic/internal/thirdparty/paystack"
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
+
+	"go.uber.org/zap"
+)
+
+const (
+	HeaderPaystackSignature    = "x-paystack-signature"
+	HeaderFlutterwaveSignature = "flutterwave-signature"
 )
 
 type service struct {
-	DB   *db.DBConn
-	Repo Repository
-
-	cfg *config.Config
+	DB       *db.DBConn
+	Repo     Repository
+	Provider provider.Service
+	logger   *zap.Logger
+	cfg      *config.Config
+	Producer *kafka.KafkaProducer
 }
 
-func NewService(db *db.DBConn, cfg *config.Config) Service {
+func NewService(
+	Provider provider.Service,
+	logger *zap.Logger,
+	db *db.DBConn,
+	cfg *config.Config,
+	producer *kafka.KafkaProducer,
+) Service {
 	return &service{
-		DB:   db,
-		Repo: NewRepository(db.Queries, db.Pool),
-
-		cfg: cfg,
+		DB:       db,
+		Repo:     NewRepository(db.Queries, db.Pool),
+		Provider: Provider,
+		logger:   logger,
+		cfg:      cfg,
+		Producer: producer,
 	}
 }
 
-func (s *service) ProcessWebhook(
+func (s *service) HandleWebhook(
 	ctx context.Context,
-	providerCode string,
-	headers map[string]string,
-	payload []byte,
-) error {
-
-	// err := s.VerifyWebhookSignature(providerCode, headers, payload)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// // 4. Extract webhook event ID (implement per provider)
-	// eventID, err := extractWebhookEventID(providerCode, payload)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// // 5. Check if already processed (idempotency)
-	// exists, err := s.DB.WebhookEventRepo.Exists(ctx, provider.ID, eventID)
-	// if err != nil {
-	// 	return err
-	// }
-	// if exists {
-	// 	return nil // already processed, skip
-	// }
-
-	// // 6. Save raw event to DB
-	// err = s.DB.WebhookEventRepo.Save(ctx, &model.WebhookEvent{
-	// 	ProviderID: provider.ID,
-	// 	EventID:    eventID,
-	// 	Payload:    payload,
-	// 	Status:     "pending",
-	// 	Attempts:   0,
-	// })
-	// if err != nil {
-	// 	return err
-	// }
-
-	// 7. Optionally enqueue to async processor
-	// s.queue.Enqueue(eventID)
-
-	return nil
-}
-
-func (s *service) ReplayWebhook(ctx context.Context, id string) error {
-	return nil
-}
-
-// VerifyWebhookSignature verifies the webhook signature based on the provider
-func (s *service) VerifyWebhookSignature(
 	provider string,
 	headers map[string]string,
 	payload []byte,
 ) error {
-	switch strings.ToLower(provider) {
-	case "paystack":
-		secret := s.cfg.PstkSecretHash
-		if secret == "" {
-			return errors.New("missing paystack secret key")
-		}
-		hash := utils.ComputeHMACSHA512(payload, secret)
-		if hash != headers["x-paystack-signature"] {
-			return model.ErrInvalidSignature
-		}
+	s.logger.Sugar().Infof("Handling webhook for provider: %s", provider)
 
-	case "flutterwave":
-		expected := s.cfg.FlwSecretHash
-		if expected == "" {
-			return errors.New("missing FLW_SECRET_HASH in environment")
-		}
-		if headers["flutterwave-signature"] != expected {
-			return model.ErrInvalidSignature
-		}
-
-	default:
-		return errors.New("unsupported provider for signature verification")
+	if err := s.VerifyWebhookSignature(ctx, provider, headers, payload); err != nil {
+		s.logger.Sugar().Errorf("Webhook signature verification failed: %v", err)
+		return err
 	}
 
+	var event map[string]interface{}
+	if err := json.Unmarshal(payload, &event); err != nil {
+		s.logger.Sugar().Errorf("Invalid webhook payload format: %v", err)
+		return fmt.Errorf("invalid webhook payload: %w", err)
+	}
+
+	switch strings.ToLower(provider) {
+	case paystack.ProviderPaystack:
+		return s.handlePaystackEvent(ctx, event, payload)
+	case flutterwave.ProviderFlutterwave:
+		return s.handleFlutterwaveEvent(ctx, event, payload)
+	default:
+		return fmt.Errorf("unsupported provider: %s", provider)
+	}
+}
+
+func (s *service) handlePaystackEvent(
+	ctx context.Context,
+	event map[string]interface{},
+	rawPayload []byte,
+) error {
+	s.logger.Sugar().Infof("Paystack event received: %+v", event)
+
+	// Example Kafka publish (if used):
+	// return s.Producer.Publish("paystack.webhooks", rawPayload)
+
 	return nil
+}
+
+func (s *service) handleFlutterwaveEvent(
+	ctx context.Context,
+	event map[string]interface{},
+	rawPayload []byte,
+) error {
+	s.logger.Sugar().Infof("Flutterwave event received: %+v", event)
+
+	return nil
+}
+
+func (s *service) VerifyWebhookSignature(
+	ctx context.Context,
+	provider string,
+	headers map[string]string,
+	payload []byte,
+) error {
+	provider = strings.ToLower(provider)
+
+	switch provider {
+	case paystack.ProviderPaystack:
+		signature := getHeader(headers, HeaderPaystackSignature)
+		if signature == "" {
+			return fmt.Errorf("missing %s header", HeaderPaystackSignature)
+		}
+
+		isValid, err := s.Provider.VerifyWebhookSignature(ctx,
+			paystack.ProviderPaystack, signature, payload)
+		if err != nil {
+			return fmt.Errorf("paystack signature verification failed: %w", err)
+		}
+		if !isValid {
+			return model.ErrInvalidSignature
+		}
+		return nil
+
+	case flutterwave.ProviderFlutterwave:
+		secret := s.cfg.FlwSecretHash
+		if secret == "" {
+			return errors.New("missing Flutterwave secret key")
+		}
+
+		if getHeader(headers, HeaderFlutterwaveSignature) != secret {
+			return model.ErrInvalidSignature
+		}
+		return nil
+
+	default:
+		return fmt.Errorf("unsupported provider for signature verification: %s", provider)
+	}
+}
+
+func getHeader(headers map[string]string, key string) string {
+	for k, v := range headers {
+		if strings.EqualFold(k, key) {
+			return v
+		}
+	}
+	return ""
 }

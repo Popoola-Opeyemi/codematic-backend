@@ -11,14 +11,16 @@ import (
 )
 
 type PaystackProvider struct {
-	client *paystack.Client
-	logger *zap.Logger
+	client    *paystack.Client
+	logger    *zap.Logger
+	apiSecret string
 }
 
-func NewPaystackProvider(logger *zap.Logger, baseURL, apiKey string) *PaystackProvider {
+func NewPaystackProvider(logger *zap.Logger, baseURL, apiSecret string) *PaystackProvider {
 	return &PaystackProvider{
-		client: paystack.NewPaystackClient(logger, baseURL, apiKey),
-		logger: logger,
+		client:    paystack.NewPaystackClient(logger, baseURL, apiSecret),
+		logger:    logger,
+		apiSecret: apiSecret,
 	}
 }
 
@@ -64,4 +66,18 @@ func (p *PaystackProvider) VerifyTransaction(ctx context.Context, reference stri
 		Reference: resp.Data.Reference,
 		Raw:       resp.Data,
 	}, nil
+}
+
+func (p *PaystackProvider) VerifyWebhookSignature(body []byte,
+	signatureHeader string) (bool, error) {
+
+	expectedSig, err := paystack.GenerateSignature(p.apiSecret, body)
+	if err != nil {
+		return false, fmt.Errorf("failed to generate signature: %w", err)
+	}
+
+	p.logger.Sugar().Debug("signatureHeader ", signatureHeader)
+	p.logger.Sugar().Debug("expectedSig ", expectedSig)
+
+	return expectedSig == signatureHeader, nil
 }
