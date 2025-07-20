@@ -555,13 +555,20 @@
 							}
 						},
 						"url": {
-							"raw": "{{API_BASE_URL}}/transactions/",
+							"raw": "{{API_BASE_URL}}/transactions/?id=3a82dc17-f086-4d16-8361-1023a9ee3d1c",
 							"host": [
 								"{{API_BASE_URL}}"
 							],
 							"path": [
 								"transactions",
 								""
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "3a82dc17-f086-4d16-8361-1023a9ee3d1c",
+									"type": "text"
+								}
 							]
 						}
 					},
