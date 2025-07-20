@@ -568,7 +568,7 @@
 					"response": []
 				},
 				{
-					"name": "get-single-transaction Copy",
+					"name": "list-transactions",
 					"id": "44470642-b32d5b97-a9a3-4437-b71a-49b28433a734",
 					"request": {
 						"method": "POST",
