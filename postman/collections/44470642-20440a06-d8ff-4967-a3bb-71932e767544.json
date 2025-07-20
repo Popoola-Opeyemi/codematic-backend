@@ -482,7 +482,27 @@
 					},
 					"request": {
 						"method": "POST",
-						"header": [],
+						"header": [
+							{
+								"key": "X-Datadog-Parent-Id",
+								"value": "3396398881907248113",
+								"type": "text"
+							},
+							{
+								"key": "X-Paystack-Signature",
+								"value": "b281cbdce4ef5a9830373afcf9b9915c9c336382a5132072b45172c645c24f5bbe8b4d04deb1294449bf51fbdb025784ff8b4481e529a7df1b724eed7c9b2955",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
 						"url": {
 							"raw": "{{API_BASE_URL}}/webhook/replay/paystack",
 							"host": [
