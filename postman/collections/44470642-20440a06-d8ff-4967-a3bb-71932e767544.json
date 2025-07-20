@@ -608,7 +608,7 @@
 					]
 				},
 				{
-					"name": "deposit Copy",
+					"name": "get-single-transaction",
 					"id": "44470642-f55f9774-16e9-4632-b059-09b49525a9ef",
 					"request": {
 						"method": "POST",
