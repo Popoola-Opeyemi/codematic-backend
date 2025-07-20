@@ -1,4 +1,4 @@
-# Codematic Backend ⚡️
+# Codematic Backend
 
 ## Overview
 
