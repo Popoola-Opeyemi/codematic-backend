@@ -611,7 +611,41 @@
 					"response": []
 				}
 			],
-			"id": "44470642-12345678-9012-3456-78901234567a"
+			"id": "44470642-12345678-9012-3456-78901234567a",
+			"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+						"key": "token",
+						"value": "{{user_authorization}}",
+						"type": "string"
+					}
+				]
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"id": "9360a808-a165-4f44-97ee-5e082a248fac",
+						"type": "text/javascript",
+						"packages": {},
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"id": "e7d8b9b6-b299-46a7-9ffc-545a274de7bc",
+						"type": "text/javascript",
+						"packages": {},
+						"exec": [
+							""
+						]
+					}
+				}
+			]
 		}
 	],
 	"event": [
