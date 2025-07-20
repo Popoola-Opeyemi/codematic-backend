@@ -14,10 +14,26 @@ CREATE TABLE "providers" (
   "id" UUID PRIMARY KEY,
   "name" VARCHAR NOT NULL,
   "code" VARCHAR UNIQUE NOT NULL,
-  "supported_channels" TEXT[] NOT NULL DEFAULT '{}',
-  "supported_currencies" TEXT[] NOT NULL DEFAULT '{}',
   "config" JSONB,
+  "priority" INTEGER NOT NULL DEFAULT 100 CHECK (priority >= 0),
   "is_active" BOOLEAN DEFAULT true,
+  "created_at" TIMESTAMPTZ DEFAULT now() NOT NULL,
+  "updated_at" TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+
+CREATE TABLE provider_supported_currencies (
+  "provider_id" UUID NOT NULL REFERENCES providers(id) ON DELETE CASCADE,
+  "currency_code" VARCHAR NOT NULL REFERENCES currencies(code) ON DELETE CASCADE,
+  PRIMARY KEY (provider_id, currency_code),
+  "created_at" TIMESTAMPTZ DEFAULT now() NOT NULL,
+  "updated_at" TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+CREATE TABLE provider_supported_channels (
+  "provider_id" UUID NOT NULL REFERENCES providers(id) ON DELETE CASCADE,
+  "channel" TEXT NOT NULL,
+  PRIMARY KEY (provider_id, channel),
   "created_at" TIMESTAMPTZ DEFAULT now() NOT NULL,
   "updated_at" TIMESTAMPTZ DEFAULT now() NOT NULL
 );
@@ -89,13 +105,12 @@ INSERT INTO wallet_types (id, name, currency, description, created_at, updated_a
   ('ca10450e-40f1-41d2-af19-23f3dcd9d5a8', 'Pound Wallet', 'GBP', 'Wallet for British Pound', now(), now());
 
 -- Seed providers
-INSERT INTO providers (id, name, code, supported_channels, config, is_active, created_at, updated_at)
+INSERT INTO providers (id, name, code, config, is_active, created_at, updated_at)
 VALUES
   (
     gen_random_uuid(),
     'Paystack',
     'paystack',
-    ARRAY['card', 'bank_transfer'],
     '{
       "base_url": "https://api.paystack.co",
       "secret_key": "sk_test_6d247fc20f3e89b2702be48d926bbd86d4e7239b",
@@ -110,7 +125,6 @@ VALUES
     gen_random_uuid(),
     'Flutterwave',
     'flutterwave',
-    ARRAY['card', 'bank_transfer'],
     '{
       "base_url": "https://api.flutterwave.com/v3",
       "secret_key": "FLWSECK_TEST-b77bfdd76bd39ab9bd9edc4fd33f6154-X",
@@ -126,7 +140,6 @@ VALUES
     gen_random_uuid(),
     'Stripe',
     'stripe',
-    ARRAY['card'],
     '{
       "base_url": "https://api.stripe.com",
       "secret_key": "STRIPE_SECRET_KEY",
@@ -137,7 +150,20 @@ VALUES
     now()
   );
 
+-- Seed supported currencies
+INSERT INTO provider_supported_currencies (provider_id, currency_code)
+SELECT id, 'NGN'
+FROM providers
+WHERE code IN ('paystack', 'flutterwave');
+
+-- Seed supported channels
+INSERT INTO provider_supported_channels (provider_id, channel)
+SELECT id, unnest(ARRAY['card', 'bank_transfer'])
+FROM providers
+WHERE code IN ('paystack', 'flutterwave');
+
 -- +goose statementend
+
 
 -- +goose down
 -- +goose statementbegin
@@ -146,6 +172,8 @@ DROP TABLE IF EXISTS "transfers" CASCADE;
 DROP TABLE IF EXISTS "transactions" CASCADE;
 DROP TABLE IF EXISTS "wallets" CASCADE;
 DROP TABLE IF EXISTS "wallet_types" CASCADE;
+DROP TABLE IF EXISTS "provider_supported_channels" CASCADE;
+DROP TABLE IF EXISTS "provider_supported_currencies" CASCADE;
 DROP TABLE IF EXISTS "providers" CASCADE;
 DROP TABLE IF EXISTS "currencies" CASCADE;
 

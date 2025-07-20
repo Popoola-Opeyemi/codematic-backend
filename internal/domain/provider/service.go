@@ -2,12 +2,13 @@ package provider
 
 import (
 	"context"
+	"fmt"
 
 	"codematic/internal/infrastructure/cache"
 	dbconn "codematic/internal/infrastructure/db"
 	db "codematic/internal/infrastructure/db/sqlc"
 	"codematic/internal/infrastructure/events/kafka"
-	"codematic/internal/shared/model"
+	"codematic/internal/thirdparty/paystack"
 
 	"go.uber.org/zap"
 )
@@ -36,9 +37,41 @@ func NewService(
 	}
 }
 
-func (s *providerService) GetProviderByCode(ctx context.Context, code string) (*db.Provider, error) {
-	provider, err := s.cacheManager.GetProviderCacheByCode(ctx, code)
-	if err == nil && provider != nil {
+// InitiateDeposit initiates a deposit transaction in a provider-agnostic way
+func (s *providerService) InitiateDeposit(ctx context.Context, req DepositRequest) (string, error) {
+
+	provider, err := s.Repo.SelectBestProviderByCurrencyAndChannel(ctx, req.Currency, req.Channel)
+	if err != nil {
+		s.Logger.Error("No provider available", zap.Error(err))
+		return "", fmt.Errorf("no provider available for currency %s and channel %s", req.Currency, req.Channel)
+	}
+
+	if provider.Code == paystack.ProviderPaystack {
+
+		paystackProvider, err := s.GetProviderByID(ctx, provider.ID.String())
+		if err == nil && provider != nil {
+			return "", nil
+		}
+
+		x := paystackProvider.Config
+		// gateway := gateways.NewPaystackProvider(paystackProvider., apiKey string, client *paystack.Client)
+
+	}
+	s.Logger.Sugar().Info("Provider", provider.Code)
+
+	return "", nil
+
+}
+
+func (s *providerService) InitiateWithdrawal(ctx context.Context, req WithdrawalRequest) (string, error) {
+
+	return "ref", nil
+}
+
+func (s *providerService) GetProviderByCode(ctx context.Context, code string) (ProviderDetails, error) {
+
+	cache, err := s.cacheManager.GetProviderCacheByCode(ctx, code)
+	if err == nil && cache != nil {
 		return provider, nil
 	}
 	provider, err = s.Repo.GetByCode(ctx, code)
@@ -86,58 +119,4 @@ func (s *providerService) InvalidateProviderCache(ctx context.Context, id, code 
 	if err == nil && provider != nil {
 		_ = s.cacheManager.SetProviderCache(ctx, provider)
 	}
-}
-
-// InitiateDeposit initiates a deposit transaction in a provider-agnostic way
-func (s *providerService) InitiateDeposit(ctx context.Context, req DepositRequest) (string, error) {
-
-	providerCode, ok := req.Metadata["provider"].(string)
-	if !ok || providerCode == "" {
-		return "", model.ErrUnsupportedProvider
-	}
-
-	provider, err := s.GetProviderByCode(ctx, providerCode)
-	if err != nil {
-		return "", model.ErrUnsupportedProvider
-	}
-
-	if provider == nil || !provider.IsActive.Valid || !provider.IsActive.Bool {
-		return "", model.ErrUnsupportedProvider
-	}
-
-	return "", nil
-
-}
-
-func (s *providerService) InitiateWithdrawal(ctx context.Context, req WithdrawalRequest) (string, error) {
-
-	providerCode, ok := req.Metadata["provider"].(string)
-	if !ok || providerCode == "" {
-		return "", model.ErrUnsupportedProvider
-	}
-
-	provider, err := s.GetProviderByCode(ctx, providerCode)
-	if err != nil {
-		return "", model.ErrUnsupportedProvider
-	}
-	if provider == nil || !provider.IsActive.Valid || !provider.IsActive.Bool {
-		return "", model.ErrUnsupportedProvider
-	}
-
-	providerSvc, ok := GetProvider(providerCode)
-	if !ok {
-		return "", model.ErrUnsupportedProvider
-	}
-
-	ref, err := providerSvc.InitiateWithdrawal(ctx, req)
-	if err != nil {
-		return "", err
-	}
-
-	return ref, nil
-}
-
-func (s *providerService) GetTransactionStatus(ctx context.Context, reference string) (string, error) {
-
-	return "pending", nil
 }
