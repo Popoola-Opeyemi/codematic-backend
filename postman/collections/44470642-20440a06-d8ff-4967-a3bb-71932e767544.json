@@ -159,13 +159,13 @@
 							}
 						},
 						"url": {
-							"raw": "{{API_BASE_URL}}/wallet/initiate-deposit",
+							"raw": "{{API_BASE_URL}}/wallet/initiate_deposit",
 							"host": [
 								"{{API_BASE_URL}}"
 							],
 							"path": [
 								"wallet",
-								"initiate-deposit"
+								"initiate_deposit"
 							]
 						}
 					},
