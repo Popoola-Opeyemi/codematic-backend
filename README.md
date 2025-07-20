@@ -165,8 +165,12 @@ CREATE TABLE "users" (
   "updated_at" TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 ```
-
 Seed data includes example tenants and users (see migrations for details).
+## Database Diagram
+
+You can view the database schema here: [dbdiagram.io](https://dbdiagram.io/d/6808ff771ca52373f5105101) 
+
+
 
 ## 📚 API Documentation (Swagger/OpenAPI)
 
@@ -246,3 +250,4 @@ Tests follow Go's `*_test.go` convention. Place tests in the relevant package di
 ## 📜 License
 
 MIT License — Free to use, modify, and contribute. 
+
