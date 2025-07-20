@@ -1,11 +1,11 @@
 package handler
 
 import (
+	"codematic/internal/app"
 	"codematic/internal/config"
 	"codematic/internal/infrastructure/cache"
 	"codematic/internal/infrastructure/db"
 	"codematic/internal/infrastructure/events/kafka"
-	"codematic/internal/shared/model"
 	"codematic/internal/shared/utils"
 
 	"github.com/go-playground/validator/v10"
@@ -26,10 +26,11 @@ type Environment struct {
 	DB            *db.DBConn
 	Logger        *zap.Logger
 	Cache         *redis.Client
-	Providers     *model.Providers
 	JWTManager    *utils.JWTManager
 	CacheManager  cache.CacheManager
 	KafkaProducer *kafka.KafkaProducer
+
+	Services *app.Services
 }
 
 func NewEnvironment(
@@ -38,21 +39,20 @@ func NewEnvironment(
 	db *db.DBConn,
 	Cache *redis.Client,
 	logger *zap.Logger,
-	Providers *model.Providers,
 	jwtManager *utils.JWTManager,
 	cacheManager cache.CacheManager,
 	kafkaProducer *kafka.KafkaProducer,
+	services *app.Services,
 ) *Environment {
-
 	return &Environment{
 		Config:        config,
 		Fiber:         fiber,
 		DB:            db,
 		Cache:         Cache,
 		Logger:        logger,
-		Providers:     Providers,
 		JWTManager:    jwtManager,
 		CacheManager:  cacheManager,
 		KafkaProducer: kafkaProducer,
+		Services:      services,
 	}
 }

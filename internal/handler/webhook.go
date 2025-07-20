@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"codematic/internal/domain/provider"
 	"codematic/internal/domain/webhook"
 	"codematic/internal/shared/model"
 
@@ -15,19 +14,8 @@ type Webhook struct {
 
 func (h *Webhook) Init(basePath string, env *Environment) error {
 
-	providerService := provider.NewService(
-		env.DB, env.CacheManager,
-		env.Logger, env.KafkaProducer,
-	)
-
 	h.env = env
-	h.service = webhook.NewService(
-		providerService,
-		env.Logger,
-		env.DB,
-		env.Config,
-		env.KafkaProducer,
-	)
+	h.service = env.Services.Webhook
 
 	group := env.Fiber.Group(basePath + "/webhook")
 	group.Post("/:provider", h.Receive)

@@ -18,7 +18,6 @@ import (
 	"codematic/internal/infrastructure/events"
 	"codematic/internal/infrastructure/events/kafka"
 	"codematic/internal/router"
-	"codematic/internal/shared/model"
 
 	"codematic/internal/shared/utils"
 	"context"
@@ -62,6 +61,7 @@ func main() {
 		cacheManager,
 		JWTManager,
 		kafkaProducer,
+		cfg,
 	)
 
 	// Initialize scheduler
@@ -70,18 +70,16 @@ func main() {
 	// Start consumers
 	app.StartConsumers(context.Background(), broker, services, zapLogger.Logger)
 
-	providers := &model.Providers{}
-
 	env := handler.NewEnvironment(
 		cfg,
 		appEnv,
 		store,
 		redisCache,
 		zapLogger.Logger,
-		providers,
 		JWTManager,
 		cacheManager,
 		kafkaProducer,
+		services,
 	)
 
 	router.InitHandlers(env, []handler.IHandler{
@@ -92,7 +90,7 @@ func main() {
 	})
 
 	go func() {
-		router.RunWithGracefulShutdown(appEnv, cfg.PORT)
+		router.RunWithGracefulShutdown(appEnv, cfg.PORT, zapLogger.Logger)
 	}()
 
 	quit := make(chan os.Signal, 1)

@@ -37,7 +37,7 @@ func RegisterPrometheusCollectors() {
 
 func InitRouterWithConfig(env *config.Config, cache *redis.Client, zapLogger *zap.Logger) *fiber.App {
 	app := fiber.New(fiber.Config{
-		IdleTimeout:  5 * time.Second, // Helps close idle connections
+		IdleTimeout:  5 * time.Second,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	})
@@ -75,7 +75,6 @@ func InitRouterWithConfig(env *config.Config, cache *redis.Client, zapLogger *za
 
 	app.Get("/metrics", adaptor.HTTPHandler(promhttp.Handler()))
 
-	// Fiber monitor dashboard (move from /metrics to /dashboard)
 	app.Get("/dashboard", monitor.New())
 	app.Get("/swagger/*", swagger.HandlerDefault) // Swagger UI endpoint
 
@@ -93,14 +92,16 @@ func InitHandlers(env *handler.Environment, handlers []handler.IHandler) error {
 	return nil
 }
 
-func RunWithGracefulShutdown(app *fiber.App, port string) {
+func RunWithGracefulShutdown(app *fiber.App, port string, zapLogger *zap.Logger) {
 	go func() {
 		if err := app.Listen("0.0.0.0:" + port); err != nil {
 			log.Fatalf("Failed to start server: %v", err)
 		}
 	}()
 
-	fmt.Printf("🚀🚀 Server is running at http://localhost:%s\n", port)
+	zapLogger.Info("🚀 🚀 Server is running",
+		zap.String("url", "http://localhost:"+port),
+	)
 
 	// Wait for interrupt signal
 	quit := make(chan os.Signal, 1)

@@ -20,11 +20,7 @@ type Tenants struct {
 func (h *Tenants) Init(basePath string, env *Environment) error {
 	h.env = env
 
-	h.service = tenants.NewService(
-		env.DB,
-		env.JWTManager,
-		env.Logger,
-	)
+	h.service = env.Services.Tenants
 
 	// Public auth routes
 	group := env.Fiber.Group(basePath + "/tenant")

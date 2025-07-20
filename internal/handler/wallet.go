@@ -2,7 +2,6 @@ package handler
 
 import (
 	"codematic/internal/domain/idempotency"
-	"codematic/internal/domain/provider"
 	"codematic/internal/domain/user"
 	"codematic/internal/domain/wallet"
 	"codematic/internal/middleware"
@@ -25,17 +24,9 @@ func (h *Wallet) Init(basePath string, env *Environment) error {
 	h.env = env
 
 	idempotencyRepo := idempotency.NewRepository(env.DB.Queries, env.DB.Pool)
-	providerService := provider.NewService(env.DB, env.CacheManager, env.Logger, env.KafkaProducer)
-	userService := user.NewService(env.DB, env.JWTManager, env.Logger)
 
-	h.service = wallet.NewService(
-		env.Logger,
-		providerService,
-		userService,
-		env.DB,
-		env.KafkaProducer,
-	)
-	h.userService = userService
+	h.service = env.Services.Wallet
+	h.userService = env.Services.User
 
 	group := env.Fiber.Group(basePath + "/wallet")
 

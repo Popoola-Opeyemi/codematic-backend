@@ -12,11 +12,7 @@ type User struct {
 func (h *User) Init(basePath string, env *Environment) error {
 	h.env = env
 
-	h.service = user.NewService(
-		env.DB,
-		env.JWTManager,
-		env.Logger,
-	)
+	h.service = env.Services.User
 
 	return nil
 

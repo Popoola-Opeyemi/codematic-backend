@@ -1,10 +1,14 @@
 package app
 
 import (
+	"codematic/internal/config"
 	"codematic/internal/consumers"
+	"codematic/internal/domain/auth"
 	"codematic/internal/domain/provider"
+	"codematic/internal/domain/tenants"
 	"codematic/internal/domain/user"
 	"codematic/internal/domain/wallet"
+	"codematic/internal/domain/webhook"
 	"codematic/internal/infrastructure/cache"
 	"codematic/internal/infrastructure/db"
 	"codematic/internal/infrastructure/events/kafka"
@@ -17,8 +21,12 @@ import (
 )
 
 type Services struct {
-	Wallet wallet.Service
-	// Add other services as needed
+	Wallet   wallet.Service
+	User     user.Service
+	Provider provider.Service
+	Tenants  tenants.Service
+	Auth     auth.Service
+	Webhook  webhook.Service
 }
 
 func InitServices(
@@ -27,22 +35,57 @@ func InitServices(
 	cacheManager cache.CacheManager,
 	jwtManager *utils.JWTManager,
 	kafkaProducer *kafka.KafkaProducer,
+	cfg *config.Config,
 ) *Services {
 
-	walletProvider := provider.NewService(store, cacheManager, logger, kafkaProducer)
+	logger.Info("initializing services...")
+
+	providerService := provider.NewService(
+		store,
+		cacheManager,
+		logger,
+		kafkaProducer,
+	)
 
 	userService := user.NewService(store, jwtManager, logger)
 
-	walletService := wallet.NewService(logger, walletProvider, userService, store, kafkaProducer)
+	tenantsService := tenants.NewService(store, jwtManager, logger)
+
+	walletService := wallet.NewService(
+		logger,
+		providerService,
+		userService,
+		store,
+		kafkaProducer,
+	)
+
+	authService := auth.NewService(
+		store,
+		userService,
+		walletService,
+		tenantsService,
+		cacheManager,
+		jwtManager,
+		cfg, logger,
+	)
+
+	webhookService := webhook.NewService(providerService, logger, store, cfg, kafkaProducer)
+
+	logger.Info("services initialized.")
 
 	return &Services{
-		Wallet: walletService,
+		Wallet:   walletService,
+		User:     userService,
+		Provider: providerService,
+		Tenants:  tenantsService,
+		Auth:     authService,
+		Webhook:  webhookService,
 	}
 }
 
 func InitScheduler(logger *zap.Logger) *scheduler.Scheduler {
 
-	logger.Info("Initializing scheduler...")
+	logger.Info("initializing scheduler...")
 
 	sched, err := scheduler.New(logger)
 	if err != nil {
@@ -59,12 +102,16 @@ func InitScheduler(logger *zap.Logger) *scheduler.Scheduler {
 
 	sched.Start()
 
-	logger.Info("Scheduler started.")
+	logger.Info("scheduler started.")
+
 	return sched
 }
 
 func StartConsumers(ctx context.Context, broker string, services *Services, logger *zap.Logger) {
-	logger.Info("Starting Kafka consumers...")
+
+	logger.Info("starting Kafka consumers...")
+
 	consumers.StartWalletPaystackConsumer(ctx, broker, services.Wallet, logger)
-	logger.Info("Wallet Paystack consumer started.", zap.String("consumer", "wallet_paystack"))
+
+	logger.Info("wallet Paystack consumer started.", zap.String("consumer", "wallet_paystack"))
 }

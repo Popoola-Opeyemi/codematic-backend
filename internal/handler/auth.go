@@ -2,10 +2,6 @@ package handler
 
 import (
 	"codematic/internal/domain/auth"
-	"codematic/internal/domain/provider"
-	"codematic/internal/domain/tenants"
-	"codematic/internal/domain/user"
-	"codematic/internal/domain/wallet"
 	"codematic/internal/middleware"
 	"codematic/internal/shared/model"
 	"codematic/internal/shared/utils"
@@ -25,27 +21,7 @@ type Auth struct {
 func (h *Auth) Init(basePath string, env *Environment) error {
 	h.env = env
 
-	userService := user.NewService(env.DB, env.JWTManager, env.Logger)
-	tenantService := tenants.NewService(env.DB, env.JWTManager, env.Logger)
-	providerService := provider.NewService(env.DB, env.CacheManager, env.Logger, env.KafkaProducer)
-
-	walletService := wallet.NewService(
-		env.Logger,
-		providerService,
-		userService, env.DB,
-		env.KafkaProducer,
-	)
-
-	h.service = auth.NewService(
-		env.DB,
-		userService,
-		walletService,
-		tenantService,
-		env.CacheManager,
-		env.JWTManager,
-		env.Config,
-		env.Logger,
-	)
+	h.service = env.Services.Auth
 
 	// Public auth routes
 	authGroup := env.Fiber.Group(basePath + "/auth")
