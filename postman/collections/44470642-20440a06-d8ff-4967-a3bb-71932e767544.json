@@ -524,64 +524,6 @@
 			"name": "transactions",
 			"item": [
 				{
-					"name": "get single transaction",
-					"id": "44470642-12345678-9012-3456-789012345678",
-					"protocolProfileBehavior": {
-						"disableBodyPruning": true
-					},
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{jwt}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{API_BASE_URL}}/transactions/{{transaction_id}}",
-							"host": [
-								"{{API_BASE_URL}}"
-							],
-							"path": [
-								"transactions",
-								"{{transaction_id}}"
-							]
-						}
-					},
-					"response": [
-						{
-							"id": "{{transaction_id}}",
-							"name": "response",
-							"originalRequest": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "Bearer {{jwt}}",
-										"type": "text"
-									}
-								],
-								"url": {
-									"raw": "{{API_BASE_URL}}/transactions/{{transaction_id}}",
-									"host": [
-										"{{API_BASE_URL}}"
-									],
-									"path": [
-										"transactions",
-										"{{transaction_id}}"
-									]
-								}
-							},
-							"_postman_previewlanguage": "Text",
-							"header": null,
-							"cookie": [],
-							"responseTime": null,
-							"body": null
-						}
-					]
-				},
-				{
 					"name": "list transactions",
 					"id": "44470642-12345678-9012-3456-789012345679",
 					"protocolProfileBehavior": {
