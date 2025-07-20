@@ -176,3 +176,17 @@ func (s *providerService) verifyPaystackSignature(provider *db.Provider,
 
 	return gateway.VerifyWebhookSignature(body, signatureHeader)
 }
+
+func (s *providerService) VerifyPaystackTransaction(ctx context.Context, reference string) (*gateways.VerifyResponse, error) {
+	// Find the best Paystack provider config (for now, just get by code)
+	provider, err := s.GetProviderByCode(ctx, "paystack")
+	if err != nil {
+		return nil, err
+	}
+	var cfg PaystackConfig
+	if err := json.Unmarshal(provider.Config, &cfg); err != nil {
+		return nil, err
+	}
+	gateway := gateways.NewPaystackProvider(s.Logger, cfg.BaseURL, cfg.SecretKey)
+	return gateway.VerifyTransaction(ctx, reference)
+}

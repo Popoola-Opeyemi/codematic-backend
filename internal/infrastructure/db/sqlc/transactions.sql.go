@@ -83,6 +83,32 @@ func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionPa
 	return i, err
 }
 
+const getTransactionByReference = `-- name: GetTransactionByReference :one
+SELECT id, tenant_id, wallet_id, provider_id, currency_code, reference, type, status, amount, fee, metadata, error_reason, created_at, updated_at FROM transactions WHERE reference = $1 LIMIT 1
+`
+
+func (q *Queries) GetTransactionByReference(ctx context.Context, reference string) (Transaction, error) {
+	row := q.db.QueryRow(ctx, getTransactionByReference, reference)
+	var i Transaction
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.WalletID,
+		&i.ProviderID,
+		&i.CurrencyCode,
+		&i.Reference,
+		&i.Type,
+		&i.Status,
+		&i.Amount,
+		&i.Fee,
+		&i.Metadata,
+		&i.ErrorReason,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listTransactionsByWalletID = `-- name: ListTransactionsByWalletID :many
 SELECT id, tenant_id, wallet_id, provider_id, currency_code, reference, type, status, amount, fee, metadata, error_reason, created_at, updated_at FROM transactions WHERE wallet_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3
 `
@@ -126,4 +152,21 @@ func (q *Queries) ListTransactionsByWalletID(ctx context.Context, arg ListTransa
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateTransactionStatusAndAmount = `-- name: UpdateTransactionStatusAndAmount :exec
+UPDATE transactions
+SET status = $1, amount = $2, updated_at = now()
+WHERE id = $3
+`
+
+type UpdateTransactionStatusAndAmountParams struct {
+	Status string
+	Amount decimal.Decimal
+	ID     pgtype.UUID
+}
+
+func (q *Queries) UpdateTransactionStatusAndAmount(ctx context.Context, arg UpdateTransactionStatusAndAmountParams) error {
+	_, err := q.db.Exec(ctx, updateTransactionStatusAndAmount, arg.Status, arg.Amount, arg.ID)
+	return err
 }

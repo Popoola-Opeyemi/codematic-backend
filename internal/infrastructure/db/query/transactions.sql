@@ -20,3 +20,11 @@ INSERT INTO transactions (
 
 -- name: ListTransactionsByWalletID :many
 SELECT * FROM transactions WHERE wallet_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3; 
+
+-- name: GetTransactionByReference :one
+SELECT * FROM transactions WHERE reference = $1 LIMIT 1; 
+
+-- name: UpdateTransactionStatusAndAmount :exec
+UPDATE transactions
+SET status = $1, amount = $2, updated_at = now()
+WHERE id = $3; 

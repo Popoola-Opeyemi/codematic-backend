@@ -41,4 +41,7 @@ type Repository interface {
 	GetWalletTypeIDByCurrency(ctx context.Context, currency string) (string, error)
 	ListActiveCurrencyCodes(ctx context.Context) ([]string, error)
 	WithTx(q *db.Queries) Repository
+
+	GetTransactionByReference(ctx context.Context, reference string) (*Transaction, error)
+	UpdateTransactionStatusAndAmount(ctx context.Context, id, status string, amount decimal.Decimal) error
 }

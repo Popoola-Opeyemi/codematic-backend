@@ -13,6 +13,8 @@ type Service interface {
 	GetProviderByID(ctx context.Context, id string) (*db.Provider, error)
 	VerifyWebhookSignature(ctx context.Context, providerCode, signatureHeader string,
 		body []byte) (bool, error)
+
+	VerifyPaystackTransaction(ctx context.Context, reference string) (*gateways.VerifyResponse, error)
 }
 
 type Repository interface {

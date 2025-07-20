@@ -47,7 +47,8 @@ func (p *PaystackProvider) InitDeposit(ctx context.Context,
 	}, nil
 }
 
-func (p *PaystackProvider) VerifyTransaction(ctx context.Context, reference string) (*VerifyResponse, error) {
+func (p *PaystackProvider) VerifyTransaction(ctx context.Context,
+	reference string) (*VerifyResponse, error) {
 	resp, err := p.client.VerifyTransaction(reference)
 	if err != nil {
 		return nil, fmt.Errorf("paystack verify error: %w", err)

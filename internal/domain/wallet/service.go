@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -255,5 +256,65 @@ func (s *WalletService) GetWalletTypeIDByCurrency(ctx context.Context,
 
 func (s *WalletService) HandlePaystackKafkaEvent(ctx context.Context, key, value []byte) {
 	s.logger.Sugar().Infof("Received Paystack wallet event from Kafka. Key: %s, Value: %s", string(key), string(value))
-	// TODO: Parse value and process the event (e.g., update wallet, create transaction, etc.)
+
+	// Parse the Paystack event payload
+	var event map[string]interface{}
+	if err := json.Unmarshal(value, &event); err != nil {
+		s.logger.Sugar().Errorf("Failed to parse Paystack event: %v", err)
+		return
+	}
+
+	// Extract reference from event data
+	data, ok := event["data"].(map[string]interface{})
+	if !ok {
+		s.logger.Sugar().Errorf("Paystack event missing data field")
+		return
+	}
+	reference, ok := data["reference"].(string)
+	if !ok || reference == "" {
+		s.logger.Sugar().Errorf("Paystack event missing reference")
+		return
+	}
+
+	// Verify transaction at Paystack
+	verifyResp, err := s.Provider.VerifyPaystackTransaction(ctx, reference)
+	if err != nil {
+		s.logger.Sugar().Errorf("Failed to verify Paystack transaction: %v", err)
+		return
+	}
+	if verifyResp.Status != "success" {
+		s.logger.Sugar().Errorf("Paystack transaction not successful: status=%s", verifyResp.Status)
+		return
+	}
+
+	// Find the transaction in our DB by reference
+	tx, err := s.Repo.GetTransactionByReference(ctx, reference)
+	if err != nil {
+		s.logger.Sugar().Errorf("No matching transaction for reference %s: %v", reference, err)
+		return
+	}
+	if tx.Status == StatusCompleted {
+		s.logger.Sugar().Infof("Transaction %s already completed", tx.ID)
+		return // idempotent
+	}
+
+	// Update wallet balance and mark transaction as completed
+	amount := decimal.NewFromInt(verifyResp.Amount).Div(decimal.NewFromInt(100)) // Paystack amount is in kobo
+	err = s.withTx(ctx, func(repo Repository) error {
+		wallet, err := repo.GetWallet(ctx, tx.WalletID)
+		if err != nil {
+			return err
+		}
+		wallet.Balance = wallet.Balance.Add(amount)
+		if err := repo.UpdateWalletBalance(ctx, wallet.ID, wallet.Balance); err != nil {
+			return err
+		}
+		return repo.UpdateTransactionStatusAndAmount(ctx, tx.ID, StatusCompleted, amount)
+	})
+	if err != nil {
+		s.logger.Sugar().Errorf("Failed to complete deposit for reference %s: %v", reference, err)
+		return
+	}
+
+	s.logger.Sugar().Infof("Deposit completed for reference %s, wallet %s, amount %s", reference, tx.WalletID, amount.String())
 }

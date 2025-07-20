@@ -230,3 +230,40 @@ func (r *walletRepository) GetWalletByUserAndCurrency(ctx context.Context, userI
 		UpdatedAt: w.UpdatedAt.Time,
 	}, nil
 }
+
+func (r *walletRepository) GetTransactionByReference(ctx context.Context, reference string) (*Transaction, error) {
+	tx, err := r.q.GetTransactionByReference(ctx, reference)
+	if err != nil {
+		return nil, err
+	}
+	var meta map[string]interface{}
+	_ = json.Unmarshal(tx.Metadata, &meta)
+	return &Transaction{
+		ID:           tx.ID.String(),
+		WalletID:     tx.WalletID.String(),
+		Type:         tx.Type,
+		TenantID:     tx.TenantID.String(),
+		Status:       tx.Status,
+		CurrencyCode: tx.CurrencyCode,
+		Amount:       tx.Amount,
+		Fee:          tx.Fee,
+		Provider:     tx.ProviderID.String(),
+		Reference:    tx.Reference,
+		Metadata:     meta,
+		Error:        tx.ErrorReason.String,
+		CreatedAt:    tx.CreatedAt.Time,
+		UpdatedAt:    tx.UpdatedAt.Time,
+	}, nil
+}
+
+func (r *walletRepository) UpdateTransactionStatusAndAmount(ctx context.Context, id, status string, amount decimal.Decimal) error {
+	uid, err := utils.StringToPgUUID(id)
+	if err != nil {
+		return err
+	}
+	return r.q.UpdateTransactionStatusAndAmount(ctx, db.UpdateTransactionStatusAndAmountParams{
+		Status: status,
+		Amount: amount,
+		ID:     uid,
+	})
+}
