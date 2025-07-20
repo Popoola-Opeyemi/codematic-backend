@@ -86,6 +86,7 @@ func main() {
 		&handler.Tenants{},
 		&handler.Wallet{},
 		&handler.Webhook{},
+		&handler.Transactions{},
 	})
 
 	go func() {
