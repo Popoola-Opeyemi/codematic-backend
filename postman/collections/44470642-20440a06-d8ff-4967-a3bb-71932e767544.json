@@ -473,6 +473,18 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "replay",
+					"id": "44470642-2dc56a54-663a-473b-93dd-0cae1bb38363",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
 				}
 			],
 			"id": "44470642-df8b2f76-8935-4c8d-9ac9-867927176fa6"
