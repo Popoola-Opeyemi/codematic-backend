@@ -15,11 +15,22 @@ CREATE TABLE "providers" (
   "name" VARCHAR NOT NULL,
   "code" VARCHAR UNIQUE NOT NULL,
   "config" JSONB,
-  "priority" INTEGER NOT NULL DEFAULT 100 CHECK (priority >= 0),
   "is_active" BOOLEAN DEFAULT true,
   "created_at" TIMESTAMPTZ DEFAULT now() NOT NULL,
   "updated_at" TIMESTAMPTZ DEFAULT now() NOT NULL
 );
+
+
+CREATE TABLE provider_metrics (
+  "provider_id" UUID PRIMARY KEY REFERENCES providers(id) ON DELETE CASCADE,
+  "priority" INTEGER NOT NULL DEFAULT 100 CHECK (priority >= 0),
+  "success_count" INTEGER DEFAULT 0,
+  "failure_count" INTEGER DEFAULT 0,
+  "last_success_at" TIMESTAMPTZ,
+  "last_failure_at" TIMESTAMPTZ,
+  "updated_at" TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
 
 
 CREATE TABLE provider_supported_currencies (
@@ -174,6 +185,7 @@ DROP TABLE IF EXISTS "wallets" CASCADE;
 DROP TABLE IF EXISTS "wallet_types" CASCADE;
 DROP TABLE IF EXISTS "provider_supported_channels" CASCADE;
 DROP TABLE IF EXISTS "provider_supported_currencies" CASCADE;
+DROP TABLE IF EXISTS "provider_metrics" CASCADE;
 DROP TABLE IF EXISTS "providers" CASCADE;
 DROP TABLE IF EXISTS "currencies" CASCADE;
 

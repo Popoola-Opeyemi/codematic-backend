@@ -15,16 +15,17 @@ const (
 	StatusCompleted = "completed"
 	StatusFailed    = "failed"
 
-	FundingChannelBankTransfer = "bank_transfer"
-	FundingChannelCard         = "card"
-	FundingChannelUSSDcard     = "ussd"
+	ChannelBankTransfer Channel = "bank_transfer"
+	ChannelCard         Channel = "card"
+	ChannelWire         Channel = "wire"
 )
 
 type (
+	Channel        string
 	DepositRequest struct {
 		Amount   string                 `json:"amount" validate:"required,numeric"`
 		Currency string                 `json:"currency" validate:"required,uppercase,len=3"`
-		Channel  string                 `json:"channel" validate:"required"`
+		Channel  Channel                `json:"channel" validate:"required"`
 		Metadata map[string]interface{} `json:"metadata"`
 	}
 
@@ -89,18 +90,34 @@ type (
 		UpdatedAt time.Time       `json:"updated_at"`
 	}
 	Transaction struct {
-		ID        string                 `json:"id"`
-		WalletID  string                 `json:"wallet_id"`
-		Type      string                 `json:"type"`
-		TenantID  string                 `json:"tenant_id"`
-		Status    string                 `json:"status"`
-		Amount    decimal.Decimal        `json:"amount"`
-		Fee       decimal.Decimal        `json:"fee"`
-		Provider  string                 `json:"provider"`
-		Reference string                 `json:"reference"`
-		Metadata  map[string]interface{} `json:"metadata"`
-		Error     string                 `json:"error"`
-		CreatedAt time.Time              `json:"created_at"`
-		UpdatedAt time.Time              `json:"updated_at"`
+		ID           string                 `json:"id"`
+		WalletID     string                 `json:"wallet_id"`
+		Type         string                 `json:"type"`
+		TenantID     string                 `json:"tenant_id"`
+		Status       string                 `json:"status"`
+		CurrencyCode string                 `json:"currency_code"`
+		Amount       decimal.Decimal        `json:"amount"`
+		Fee          decimal.Decimal        `json:"fee"`
+		Provider     string                 `json:"provider"`
+		Reference    string                 `json:"reference"`
+		Metadata     map[string]interface{} `json:"metadata"`
+		Error        string                 `json:"error"`
+		CreatedAt    time.Time              `json:"created_at"`
+		UpdatedAt    time.Time              `json:"updated_at"`
+	}
+
+	DepositResponse struct {
+		AuthorizationURL string `json:"authorization_url"`
+		Reference        string `json:"reference"`
+		Provider         string `json:"provider"`
+		ProviderID       string `json:"provider_id"`
 	}
 )
+
+func (c Channel) IsValid() bool {
+	switch c {
+	case ChannelBankTransfer, ChannelCard, ChannelWire:
+		return true
+	}
+	return false
+}

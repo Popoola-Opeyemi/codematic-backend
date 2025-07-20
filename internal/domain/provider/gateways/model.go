@@ -10,16 +10,17 @@ type (
 	}
 
 	DepositRequest struct {
-		UserID   string
-		WalletID string
-		Amount   decimal.Decimal
-		Metadata map[string]interface{}
+		ProviderID string
+		Email      string
+		Amount     decimal.Decimal
+		Metadata   map[string]interface{}
 	}
 
-	InitDepositResponse struct {
+	GatewayResponse struct {
 		AuthorizationURL string
 		Reference        string
 		Provider         string
+		ProviderID       string
 	}
 
 	VerifyResponse struct {

@@ -5,6 +5,8 @@
 package db
 
 import (
+	"encoding/json"
+
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/shopspring/decimal"
 )
@@ -48,6 +50,30 @@ type Provider struct {
 	IsActive  pgtype.Bool
 	CreatedAt pgtype.Timestamptz
 	UpdatedAt pgtype.Timestamptz
+}
+
+type ProviderMetric struct {
+	ProviderID    pgtype.UUID
+	Priority      int32
+	SuccessCount  pgtype.Int4
+	FailureCount  pgtype.Int4
+	LastSuccessAt pgtype.Timestamptz
+	LastFailureAt pgtype.Timestamptz
+	UpdatedAt     pgtype.Timestamptz
+}
+
+type ProviderSupportedChannel struct {
+	ProviderID pgtype.UUID
+	Channel    string
+	CreatedAt  pgtype.Timestamptz
+	UpdatedAt  pgtype.Timestamptz
+}
+
+type ProviderSupportedCurrency struct {
+	ProviderID   pgtype.UUID
+	CurrencyCode string
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
 }
 
 type Tenant struct {
@@ -138,7 +164,7 @@ type WebhookEvent struct {
 	ProviderEventID string
 	TenantID        pgtype.UUID
 	EventType       string
-	Payload         []byte
+	Payload         json.RawMessage
 	Status          string
 	Attempts        pgtype.Int4
 	LastError       pgtype.Text

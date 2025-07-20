@@ -1,5 +1,9 @@
 package flutterwave
 
+const (
+	ProviderFlutterwave = "flutterwave"
+)
+
 type InitPaymentRequest struct {
 	TxRef          string                 `json:"tx_ref"`
 	Amount         float64                `json:"amount"`

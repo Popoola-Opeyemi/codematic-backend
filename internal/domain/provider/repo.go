@@ -5,8 +5,6 @@ import (
 	"codematic/internal/shared/utils"
 	"context"
 	"encoding/json"
-	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -27,77 +25,9 @@ func (r *providerRepository) WithTx(q *db.Queries) Repository {
 	return NewRepository(q, r.p)
 }
 
-func decodeProviderConfig(code string, configRaw []byte) (interface{}, error) {
-	switch code {
-	case "paystack":
-		var cfg PaystackConfig
-		if err := json.Unmarshal(configRaw, &cfg); err != nil {
-			return nil, fmt.Errorf("failed to decode paystack config: %w", err)
-		}
-		return cfg, nil
-	case "flutterwave":
-		var cfg FlutterwaveConfig
-		if err := json.Unmarshal(configRaw, &cfg); err != nil {
-			return nil, fmt.Errorf("failed to decode flutterwave config: %w", err)
-		}
-		return cfg, nil
-	default:
-		return nil, fmt.Errorf("unsupported provider code: %s", code)
-	}
-}
-
-func 
-(p *ProviderDetails) (*db.Provider, error) {
-	if p == nil {
-		return nil, fmt.Errorf("provider details is nil")
-	}
-
-	configJSON, err := json.Marshal(p.Config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal provider config: %w", err)
-	}
-
-	uid, err := utils.StringToPgUUID(p.ID)
-	if err != nil {
-		return nil, fmt.Errorf("invalid provider ID: %w", err)
-	}
-
-	return &db.Provider{
-		ID:        uid,
-		Name:      p.Name,
-		Code:      p.Code,
-		Config:    configJSON,
-		IsActive:  utils.ToPgxBool(p.IsActive),
-		CreatedAt: utils.ToPgTimestamptz(p.CreatedAt),
-		UpdatedAt: utils.ToPgTimestamptz(p.UpdatedAt),
-	}, nil
-}
-
-func transformToProviderDetails(p db.Provider) (*ProviderDetails, error) {
-	id := utils.FromPgUUID(p.ID)
-	isActive, _ := p.IsActive.Value()
-	createdAt, _ := p.CreatedAt.Value()
-	updatedAt, _ := p.UpdatedAt.Value()
-
-	config, err := decodeProviderConfig(p.Code, p.Config)
-	if err != nil {
-		return nil, err
-	}
-
-	return &ProviderDetails{
-		ID:        id,
-		Name:      p.Name,
-		Code:      p.Code,
-		IsActive:  isActive.(bool),
-		CreatedAt: createdAt.(time.Time),
-		UpdatedAt: updatedAt.(time.Time),
-		Config:    config,
-	}, nil
-}
-
 // Create a new provider
 func (r *providerRepository) CreateProvider(ctx context.Context,
-	arg CreateProviderParams) (*ProviderDetails, error) {
+	arg CreateProviderParams) (*db.Provider, error) {
 	configJSON, err := json.Marshal(arg.Config)
 	if err != nil {
 		return nil, err
@@ -111,68 +41,30 @@ func (r *providerRepository) CreateProvider(ctx context.Context,
 	if err != nil {
 		return nil, err
 	}
-
-	return transformToProviderDetails(p)
+	return &p, nil
 }
 
 // Get provider by ID
-func (r *providerRepository) GetByID(ctx context.Context, id string) (*ProviderDetails, error) {
+func (r *providerRepository) GetByID(ctx context.Context, id string) (*db.Provider, error) {
 	uid, err := utils.StringToPgUUID(id)
 	if err != nil {
 		return nil, err
 	}
-
 	p, err := r.q.GetProviderByID(ctx, uid)
 	if err != nil {
 		return nil, err
 	}
-
-	// Convert pgtype fields
-	providerID := utils.FromPgUUID(p.ID)
-	createdAt, _ := p.CreatedAt.Value()
-	updatedAt, _ := p.UpdatedAt.Value()
-	isActive, _ := p.IsActive.Value()
-
-	var config interface{}
-
-	switch p.Code {
-	case "paystack":
-		var cfg PaystackConfig
-		if err := json.Unmarshal(p.Config, &cfg); err != nil {
-			return nil, fmt.Errorf("failed to decode paystack config: %w", err)
-		}
-		config = cfg
-
-	case "flutterwave":
-		var cfg FlutterwaveConfig
-		if err := json.Unmarshal(p.Config, &cfg); err != nil {
-			return nil, fmt.Errorf("failed to decode flutterwave config: %w", err)
-		}
-		config = cfg
-
-	default:
-		return nil, fmt.Errorf("unsupported provider code: %s", p.Code)
-	}
-
-	return &ProviderDetails{
-		ID:        providerID,
-		Name:      p.Name,
-		Code:      p.Code,
-		IsActive:  isActive.(bool),
-		CreatedAt: createdAt.(time.Time),
-		UpdatedAt: updatedAt.(time.Time),
-		Config:    config,
-	}, nil
+	return &p, nil
 }
 
 // Get provider by code
 func (r *providerRepository) GetByCode(ctx context.Context,
-	code string) (*ProviderDetails, error) {
+	code string) (*db.Provider, error) {
 	p, err := r.q.GetProviderByCode(ctx, code)
 	if err != nil {
 		return nil, err
 	}
-	return transformToProviderDetails(p)
+	return &p, nil
 }
 
 // List all active providers
@@ -181,17 +73,17 @@ func (r *providerRepository) ListActiveProviders(ctx context.Context) ([]db.Prov
 }
 
 // Update provider config
-func (r *providerRepository) Update(ctx context.Context,
-	arg db.UpdateProviderConfigParams) (*ProviderDetails, error) {
+func (r *providerRepository) Update(ctx context.Context, arg db.UpdateProviderConfigParams) (*db.Provider, error) {
 	p, err := r.q.UpdateProviderConfig(ctx, arg)
 	if err != nil {
 		return nil, err
 	}
-	return transformToProviderDetails(p)
+	return &p, nil
 }
 
 // Update config using map[string]interface{}
-func (r *providerRepository) UpdateConfig(ctx context.Context, id string, config map[string]interface{}) (*ProviderDetails, error) {
+func (r *providerRepository) UpdateConfig(ctx context.Context,
+	id string, config map[string]interface{}) (*db.Provider, error) {
 	uid, err := utils.StringToPgUUID(id)
 	if err != nil {
 		return nil, err
@@ -209,8 +101,7 @@ func (r *providerRepository) UpdateConfig(ctx context.Context, id string, config
 	if err != nil {
 		return nil, err
 	}
-
-	return transformToProviderDetails(p)
+	return &p, nil
 }
 
 // Deactivate a provider

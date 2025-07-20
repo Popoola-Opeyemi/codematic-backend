@@ -9,6 +9,7 @@ import (
 	"codematic/internal/shared/model"
 	"codematic/internal/shared/utils"
 	"context"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/shopspring/decimal"
@@ -92,17 +93,20 @@ func (h *Wallet) InitiateDeposit(c *fiber.Ctx) error {
 		)
 	}
 
+	if !req.Channel.IsValid() {
+		return utils.SendErrorResponse(c, fiber.StatusBadRequest, "invalid channel")
+	}
+
 	if err := validate.Struct(&req); err != nil {
 		return utils.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
 	}
 
-	// Set the user ID from JWT token
 	userID := utils.ExtractUserIDFromJWT(c)
 	if userID == "" {
 		return utils.SendErrorResponse(c, fiber.StatusUnauthorized, "User ID not found in token")
 	}
 
-	userEmail := utils.ExtractUserIDFromJWT(c)
+	userEmail := utils.ExtractUserEmailFromJWT(c)
 	if userEmail == "" {
 		return utils.SendErrorResponse(c, fiber.StatusUnauthorized, "User Email not found in token")
 	}
@@ -120,27 +124,36 @@ func (h *Wallet) InitiateDeposit(c *fiber.Ctx) error {
 		"email": userEmail,
 	}
 
+	currency := strings.ToUpper(req.Currency)
+
 	form := wallet.DepositForm{
 		UserID:   userID,
 		TenantID: tenantID,
 		Amount:   amount,
-		Channel:  req.Channel,
+		Currency: currency,
+		Channel:  string(req.Channel),
 		Metadata: metadata,
 	}
 
 	ctx := context.Background()
-	if err := h.service.InitiateDeposit(ctx, form); err != nil {
+
+	response, err := h.service.InitiateDeposit(ctx, form)
+	if err != nil {
 		return utils.SendErrorResponse(c,
 			fiber.StatusBadRequest,
 			err.Error(),
 		)
 	}
+	h.env.Logger.Sugar().Infof("Deposit response: %+v", response)
 
 	return utils.SendSuccessResponse(c, fiber.StatusOK, fiber.Map{
-		"status":    "pending",
-		"reference": "",
-		"message":   "Deposit initiated successfully. Please complete the payment with the provider.",
+		"authorization_url": response.AuthorizationURL,
+		"reference":         response.Reference,
+		"provider":          response.Provider,
+		"provider_id":       response.ProviderID,
 	})
+
+	// return utils.SendSuccessResponse(c, fiber.StatusOK, response)
 
 }
 

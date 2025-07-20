@@ -1,5 +1,7 @@
 package idempotency
 
+import "encoding/json"
+
 type (
 	CreateParams struct {
 		ID           string
@@ -8,15 +10,17 @@ type (
 		Key          string
 		Endpoint     string
 		RequestHash  string
-		ResponseBody map[string]interface{}
-		StatusCode   int
+		ResponseBody json.RawMessage
+
+		StatusCode int
 	}
 
 	UpdateResponseParams struct {
 		TenantID     string
 		Key          string
 		Endpoint     string
-		ResponseBody map[string]interface{}
-		StatusCode   int
+		ResponseBody json.RawMessage
+
+		StatusCode int
 	}
 )

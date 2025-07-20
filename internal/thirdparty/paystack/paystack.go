@@ -18,19 +18,19 @@ type Client struct {
 	baseclient.BaseClient
 }
 
-func NewPaystackClient(baseURL, apiKey string, logger *zap.Logger) *Client {
+func NewPaystackClient(logger *zap.Logger, baseURL, apiKey string) *Client {
 	config := baseclient.DefaultConfig()
 	config.Timeout = 60 * time.Second
 	config.MaxIdleConns = 50
 	config.MaxIdleConnsPerHost = 5
 
-	baseClient := baseclient.NewBaseClientWithConfig(config)
+	baseClient := baseclient.NewBaseClientWithConfig(logger, config)
 
 	return &Client{
 		apiKey:     apiKey,
-		logger:     logger,
 		baseURL:    baseURL,
 		BaseClient: *baseClient,
+		logger:     logger, // ✅ ensure logger is assigned
 	}
 }
 
@@ -39,7 +39,7 @@ func (c *Client) InitializeTransaction(req *InitializeTransactionRequest) (*Init
 
 	resp, err := c.MakeRequest(http.MethodPost, url, req, c.authHeaders())
 	if err != nil {
-		c.logger.Error("failed to make request", zap.Error(err))
+		c.logger.Error("initialize transaction request failed", zap.Error(err))
 		return nil, err
 	}
 	defer resp.Body.Close()
@@ -66,7 +66,7 @@ func (c *Client) VerifyTransaction(reference string) (*VerifyTransactionResponse
 
 	resp, err := c.MakeRequest(http.MethodGet, url, nil, c.authHeaders())
 	if err != nil {
-		c.logger.Error("failed to make request", zap.Error(err))
+		c.logger.Error("verify transaction request failed", zap.Error(err))
 		return nil, err
 	}
 	defer resp.Body.Close()

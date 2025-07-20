@@ -754,6 +754,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "currency_code": {
+                    "type": "string"
+                },
                 "error": {
                     "type": "string"
                 },

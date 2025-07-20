@@ -99,16 +99,17 @@ func (r *walletRepository) CreateTransaction(ctx context.Context, tx *Transactio
 	meta, _ := json.Marshal(tx.Metadata)
 
 	_, err := r.q.CreateTransaction(ctx, db.CreateTransactionParams{
-		ID:         uid,
-		TenantID:   tid,
-		WalletID:   wid,
-		ProviderID: pid,
-		Reference:  tx.Reference,
-		Type:       tx.Type,
-		Status:     tx.Status,
-		Amount:     tx.Amount,
-		Fee:        tx.Fee,
-		Metadata:   meta,
+		ID:           uid,
+		TenantID:     tid,
+		WalletID:     wid,
+		ProviderID:   pid,
+		Reference:    tx.Reference,
+		Type:         tx.Type,
+		CurrencyCode: tx.CurrencyCode,
+		Status:       tx.Status,
+		Amount:       tx.Amount,
+		Fee:          tx.Fee,
+		Metadata:     meta,
 	})
 	return err
 }

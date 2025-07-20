@@ -2,12 +2,16 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 
+	"codematic/internal/domain/provider/gateways"
 	"codematic/internal/infrastructure/cache"
 	dbconn "codematic/internal/infrastructure/db"
 	db "codematic/internal/infrastructure/db/sqlc"
 	"codematic/internal/infrastructure/events/kafka"
+	"codematic/internal/thirdparty/flutterwave"
 	"codematic/internal/thirdparty/paystack"
 
 	"go.uber.org/zap"
@@ -37,30 +41,65 @@ func NewService(
 	}
 }
 
-// InitiateDeposit initiates a deposit transaction in a provider-agnostic way
-func (s *providerService) InitiateDeposit(ctx context.Context, req DepositRequest) (string, error) {
+func (s *providerService) InitiateDeposit(ctx context.Context,
+	req DepositRequest) (gateways.GatewayResponse, error) {
 
-	provider, err := s.Repo.SelectBestProviderByCurrencyAndChannel(ctx, req.Currency, req.Channel)
+	email, _ := req.Metadata["email"].(string)
+	s.Logger.Sugar().Info("User Email:", email)
+
+	var response gateways.GatewayResponse
+
+	providerRow, err := s.Repo.SelectBestProviderByCurrencyAndChannel(ctx, req.Currency, req.Channel)
 	if err != nil {
 		s.Logger.Error("No provider available", zap.Error(err))
-		return "", fmt.Errorf("no provider available for currency %s and channel %s", req.Currency, req.Channel)
+		return response, fmt.Errorf("no provider available for currency %s and channel %s", req.Currency, req.Channel)
 	}
 
-	if provider.Code == paystack.ProviderPaystack {
+	s.Logger.Sugar().Info("Selected provider:", providerRow.Name)
 
-		paystackProvider, err := s.GetProviderByID(ctx, provider.ID.String())
-		if err == nil && provider != nil {
-			return "", nil
+	// Get full provider with config
+	provider, err := s.GetProviderByID(ctx, providerRow.ID.String())
+	if err != nil {
+		s.Logger.Error("Failed to retrieve provider details", zap.Error(err))
+		return response, err
+	}
+
+	switch strings.ToLower(provider.Code) {
+	case paystack.ProviderPaystack:
+
+		s.Logger.Sugar().Info("Handling Paystack provider")
+
+		var cfg PaystackConfig
+		if err := json.Unmarshal(provider.Config, &cfg); err != nil {
+			s.Logger.Error("Failed to decode paystack config", zap.Error(err))
+			return response, err
 		}
 
-		x := paystackProvider.Config
-		// gateway := gateways.NewPaystackProvider(paystackProvider., apiKey string, client *paystack.Client)
+		gateway := gateways.NewPaystackProvider(s.Logger, cfg.BaseURL, cfg.SecretKey)
 
+		gatewayReq := gateways.DepositRequest{
+			Email:      email,
+			Amount:     req.Amount,
+			ProviderID: provider.ID.String(),
+		}
+
+		res, err := gateway.InitDeposit(ctx, gatewayReq)
+		if err != nil {
+			s.Logger.Error("Paystack InitDeposit failed", zap.Error(err))
+			return response, err
+		}
+		response = res
+
+	case flutterwave.ProviderFlutterwave:
+		return response, fmt.Errorf("flutterwave not yet implemented")
+
+	default:
+		return response, fmt.Errorf("unsupported provider: %s", provider.Code)
 	}
-	s.Logger.Sugar().Info("Provider", provider.Code)
 
-	return "", nil
+	s.Logger.Sugar().Info("Paystack deposit initiated successfully", response)
 
+	return response, nil
 }
 
 func (s *providerService) InitiateWithdrawal(ctx context.Context, req WithdrawalRequest) (string, error) {
@@ -68,10 +107,9 @@ func (s *providerService) InitiateWithdrawal(ctx context.Context, req Withdrawal
 	return "ref", nil
 }
 
-func (s *providerService) GetProviderByCode(ctx context.Context, code string) (ProviderDetails, error) {
-
-	cache, err := s.cacheManager.GetProviderCacheByCode(ctx, code)
-	if err == nil && cache != nil {
+func (s *providerService) GetProviderByCode(ctx context.Context, code string) (*db.Provider, error) {
+	provider, err := s.cacheManager.GetProviderCacheByCode(ctx, code)
+	if err == nil && provider != nil {
 		return provider, nil
 	}
 	provider, err = s.Repo.GetByCode(ctx, code)
@@ -85,15 +123,25 @@ func (s *providerService) GetProviderByCode(ctx context.Context, code string) (P
 func (s *providerService) GetProviderByID(ctx context.Context, id string) (*db.Provider, error) {
 	provider, err := s.cacheManager.GetProviderCacheByID(ctx, id)
 	if err == nil && provider != nil {
+		s.Logger.Sugar().Info("Provider found in cache ", "id ", id)
 		return provider, nil
 	}
 
+	if err != nil {
+		s.Logger.Warn("Cache lookup failed", zap.Error(err))
+	}
+
+	// Fallback to DB
 	provider, err = s.Repo.GetByID(ctx, id)
 	if err != nil || provider == nil {
 		return provider, err
 	}
 
-	_ = s.cacheManager.SetProviderCache(ctx, provider)
+	// Populate cache
+	if cacheErr := s.cacheManager.SetProviderCache(ctx, provider); cacheErr != nil {
+		s.Logger.Warn("Failed to set provider in cache", zap.Error(cacheErr))
+	}
+
 	return provider, nil
 }
 

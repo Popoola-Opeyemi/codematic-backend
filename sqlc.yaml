@@ -31,3 +31,7 @@ overrides:
         go_type: string
       - db_type: kyc_status
         go_type: string
+      - db_type: jsonb
+        go_type:
+          import: encoding/json
+          type: RawMessage

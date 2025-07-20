@@ -5,37 +5,40 @@ import (
 	"fmt"
 
 	"codematic/internal/thirdparty/paystack"
+
+	"go.uber.org/zap"
 )
 
 type PaystackProvider struct {
-	apiKey  string
-	baseURL string
-	client  *paystack.Client
+	client *paystack.Client
+	logger *zap.Logger
 }
 
-func NewPaystackProvider(baseURL, apiKey string, client *paystack.Client) *PaystackProvider {
+func NewPaystackProvider(logger *zap.Logger, baseURL, apiKey string) *PaystackProvider {
 	return &PaystackProvider{
-		apiKey:  apiKey,
-		baseURL: baseURL,
-		client:  client,
+		client: paystack.NewPaystackClient(logger, baseURL, apiKey),
+		logger: logger,
 	}
 }
 
-func (p *PaystackProvider) InitDeposit(ctx context.Context, email string,
-	req DepositRequest) (*InitDepositResponse, error) {
+func (p *PaystackProvider) InitDeposit(ctx context.Context,
+	req DepositRequest) (GatewayResponse, error) {
 	resp, err := p.client.InitializeTransaction(&paystack.InitializeTransactionRequest{
 		Amount:   req.Amount.String(),
-		Email:    email,
+		Email:    req.Email,
 		Metadata: req.Metadata,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("paystack init deposit error: %w", err)
+		return GatewayResponse{}, fmt.Errorf("paystack init deposit error: %w", err)
 	}
 
-	return &InitDepositResponse{
+	p.logger.Sugar().Infow("Paystack", "response", fmt.Sprintf("%+v", resp))
+
+	return GatewayResponse{
 		AuthorizationURL: resp.Data.AuthorizationURL,
 		Reference:        resp.Data.Reference,
 		Provider:         paystack.ProviderPaystack,
+		ProviderID:       req.ProviderID,
 	}, nil
 }
 

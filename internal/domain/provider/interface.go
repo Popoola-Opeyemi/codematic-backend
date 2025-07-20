@@ -1,25 +1,24 @@
 package provider
 
 import (
+	"codematic/internal/domain/provider/gateways"
 	db "codematic/internal/infrastructure/db/sqlc"
 	"context"
 )
 
 type Service interface {
-	InitiateDeposit(ctx context.Context, req DepositRequest) (string, error)
+	InitiateDeposit(ctx context.Context,
+		req DepositRequest) (gateways.GatewayResponse, error)
 	// InitiateWithdrawal(ctx context.Context, req WithdrawalRequest) (string, error)
 }
 
 type Repository interface {
-	CreateProvider(ctx context.Context,
-		arg CreateProviderParams) (*ProviderDetails, error)
-	GetByID(ctx context.Context, id string) (*ProviderDetails, error)
-	GetByCode(ctx context.Context,
-		code string) (*ProviderDetails, error)
+	CreateProvider(ctx context.Context, arg CreateProviderParams) (*db.Provider, error)
+	GetByID(ctx context.Context, id string) (*db.Provider, error)
+	GetByCode(ctx context.Context, code string) (*db.Provider, error)
 	ListActiveProviders(ctx context.Context) ([]db.Provider, error)
-	UpdateConfig(ctx context.Context, id string, config map[string]interface{}) (*ProviderDetails, error)
-	Update(ctx context.Context,
-		arg db.UpdateProviderConfigParams) (*ProviderDetails, error)
+	UpdateConfig(ctx context.Context, id string, config map[string]interface{}) (*db.Provider, error)
+	Update(ctx context.Context, arg db.UpdateProviderConfigParams) (*db.Provider, error)
 	Deactivate(ctx context.Context, id string) error
 	WithTx(q *db.Queries) Repository
 

@@ -3,8 +3,10 @@ package wallet
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"codematic/internal/domain/provider"
+	"codematic/internal/domain/provider/gateways"
 	"codematic/internal/domain/user"
 	"codematic/internal/infrastructure/db"
 	dbsqlc "codematic/internal/infrastructure/db/sqlc"
@@ -72,49 +74,53 @@ func (s *WalletService) withTx(ctx context.Context, fn func(repo Repository) err
 	return tx.Commit(ctx)
 }
 
-func (s *WalletService) InitiateDeposit(ctx context.Context, data DepositForm) error {
-
+func (s *WalletService) InitiateDeposit(ctx context.Context, data DepositForm) (gateways.GatewayResponse, error) {
 	s.logger.Sugar().Infof("Deposit started: tenant_id=%s, amount=%s, channel=%s",
 		data.TenantID, data.Amount.String(), data.Channel)
 
+	var response gateways.GatewayResponse
+
 	if data.Amount.LessThanOrEqual(decimal.Zero) {
 		s.logger.Sugar().Errorf("Invalid deposit amount: %s", data.Amount.String())
-		return errors.New("amount must be positive")
+		return response, errors.New("amount must be positive")
 	}
 
-	return s.withTx(ctx, func(repo Repository) error {
+	err := s.withTx(ctx, func(repo Repository) error {
 		// Check wallet existence
 		wallet, err := repo.GetWalletByUserAndCurrency(ctx, data.UserID, data.Currency)
 		if err != nil {
 			s.logger.Sugar().Errorf("Failed to get wallet for user %s and currency %s: %v", data.UserID, data.Currency, err)
-			return err
+			return fmt.Errorf("failed to get %s wallet for user", data.Currency)
 		}
 
 		// Call the provider service to initiate the payment first
 		providerReq := provider.DepositRequest{
 			Amount:   data.Amount,
 			Channel:  data.Channel,
+			Currency: data.Currency,
 			Metadata: data.Metadata,
 		}
 
-		reference, err := s.Provider.InitiateDeposit(ctx, providerReq)
+		gateway, err := s.Provider.InitiateDeposit(ctx, providerReq)
 		if err != nil {
 			s.logger.Sugar().Errorf("Failed to initiate deposit with provider: %v", err)
 			return err
 		}
 
-		// Create a pending transaction record with provider reference
+		s.logger.Sugar().Infow("Gateway response", "response", fmt.Sprintf("%+v", gateway))
+
 		transaction := &Transaction{
-			ID:        uuid.NewString(),
-			WalletID:  wallet.ID,
-			Type:      TransactionDeposit,
-			TenantID:  data.TenantID,
-			Status:    StatusPending,
-			Amount:    data.Amount,
-			Fee:       decimal.Zero,
-			Provider:  data.Channel,
-			Reference: reference,
-			Metadata:  data.Metadata,
+			ID:           uuid.NewString(),
+			WalletID:     wallet.ID,
+			Type:         TransactionDeposit,
+			TenantID:     data.TenantID,
+			Status:       StatusPending,
+			Amount:       data.Amount,
+			Fee:          decimal.Zero,
+			Provider:     gateway.ProviderID,
+			CurrencyCode: data.Currency,
+			Reference:    gateway.Reference,
+			Metadata:     data.Metadata,
 		}
 
 		if err := repo.CreateTransaction(ctx, transaction); err != nil {
@@ -122,9 +128,12 @@ func (s *WalletService) InitiateDeposit(ctx context.Context, data DepositForm) e
 			return err
 		}
 
-		s.logger.Sugar().Infof("Deposit initiated successfully: transaction_id=%s, reference=%s", transaction.ID, reference)
+		response = gateway
+
 		return nil
 	})
+
+	return response, err
 }
 
 func (s *WalletService) Withdraw(ctx context.Context, data WithdrawalForm) error {

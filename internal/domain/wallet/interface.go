@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"codematic/internal/domain/provider/gateways"
 	db "codematic/internal/infrastructure/db/sqlc"
 	"context"
 
@@ -8,7 +9,7 @@ import (
 )
 
 type Service interface {
-	InitiateDeposit(ctx context.Context, data DepositForm) error
+	InitiateDeposit(ctx context.Context, data DepositForm) (gateways.GatewayResponse, error)
 	Withdraw(ctx context.Context, data WithdrawalForm) error
 	Transfer(ctx context.Context, data TransferForm) error
 	GetBalance(ctx context.Context, walletID string) (decimal.Decimal, error)

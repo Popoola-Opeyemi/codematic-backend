@@ -24,7 +24,7 @@ func NewFlutterwaveClient(baseURL, secret string, logger *zap.Logger) *Client {
 	config.MaxIdleConns = 50
 	config.MaxIdleConnsPerHost = 5
 
-	baseCLI := baseclient.NewBaseClientWithConfig(config)
+	baseCLI := baseclient.NewBaseClientWithConfig(logger, config)
 	return &Client{client: *baseCLI, secret: secret, baseURL: baseURL, logger: logger}
 }
 

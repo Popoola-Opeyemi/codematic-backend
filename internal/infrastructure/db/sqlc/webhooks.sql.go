@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -26,7 +27,7 @@ type CreateWebhookEventParams struct {
 	ProviderEventID string
 	TenantID        pgtype.UUID
 	EventType       string
-	Payload         []byte
+	Payload         json.RawMessage
 	Status          string
 	Attempts        pgtype.Int4
 	LastError       pgtype.Text

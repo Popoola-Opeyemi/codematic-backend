@@ -2,7 +2,9 @@ package utils
 
 import (
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"time"
@@ -322,7 +324,36 @@ func HashRequestBody(body []byte) string {
 		return ""
 	}
 
+	// Try to unmarshal as JSON
+	var obj interface{}
+	if err := json.Unmarshal(body, &obj); err == nil {
+		// Marshal back with sorted keys and no extra whitespace
+		normalized, err := json.Marshal(obj)
+		if err == nil {
+			hasher := sha256.New()
+			hasher.Write(normalized)
+			return hex.EncodeToString(hasher.Sum(nil))
+		}
+	}
+	// Fallback: hash raw body
 	hasher := sha256.New()
 	hasher.Write(body)
 	return hex.EncodeToString(hasher.Sum(nil))
+}
+
+func DecodeBase64StringToBytes(encoded string) ([]byte, error) {
+	decoded, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return nil, errors.New("invalid base64 input: " + err.Error())
+	}
+	return decoded, nil
+}
+
+func DecodeBase64Bytes(encoded []byte) ([]byte, error) {
+	decoded := make([]byte, base64.StdEncoding.DecodedLen(len(encoded)))
+	n, err := base64.StdEncoding.Decode(decoded, encoded)
+	if err != nil {
+		return nil, errors.New("invalid base64 input: " + err.Error())
+	}
+	return decoded[:n], nil
 }

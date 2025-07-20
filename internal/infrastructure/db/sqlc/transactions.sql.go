@@ -14,24 +14,38 @@ import (
 
 const createTransaction = `-- name: CreateTransaction :one
 INSERT INTO transactions (
-  id, tenant_id, wallet_id, provider_id, reference, type, status, amount, fee, metadata, error_reason, created_at, updated_at
+  id,
+  tenant_id,
+  wallet_id,
+  provider_id,
+  currency_code,
+  reference,
+  type,
+  status,
+  amount,
+  fee,
+  metadata,
+  error_reason,
+  created_at,
+  updated_at
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now(), now()
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now(), now()
 ) RETURNING id, tenant_id, wallet_id, provider_id, currency_code, reference, type, status, amount, fee, metadata, error_reason, created_at, updated_at
 `
 
 type CreateTransactionParams struct {
-	ID          pgtype.UUID
-	TenantID    pgtype.UUID
-	WalletID    pgtype.UUID
-	ProviderID  pgtype.UUID
-	Reference   string
-	Type        string
-	Status      string
-	Amount      decimal.Decimal
-	Fee         decimal.Decimal
-	Metadata    []byte
-	ErrorReason pgtype.Text
+	ID           pgtype.UUID
+	TenantID     pgtype.UUID
+	WalletID     pgtype.UUID
+	ProviderID   pgtype.UUID
+	CurrencyCode string
+	Reference    string
+	Type         string
+	Status       string
+	Amount       decimal.Decimal
+	Fee          decimal.Decimal
+	Metadata     []byte
+	ErrorReason  pgtype.Text
 }
 
 func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionParams) (Transaction, error) {
@@ -40,6 +54,7 @@ func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionPa
 		arg.TenantID,
 		arg.WalletID,
 		arg.ProviderID,
+		arg.CurrencyCode,
 		arg.Reference,
 		arg.Type,
 		arg.Status,

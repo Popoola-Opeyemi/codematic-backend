@@ -2,6 +2,6 @@ global:
   scrape_interval: 15s
 
 scrape_configs:
-  - job_name: "dexly"
+  - job_name: "codematic-backend"
     static_configs:
-      - targets: ["dexly-dev:8092"] 
+      - targets: ["codematic-dev:8092"] 
