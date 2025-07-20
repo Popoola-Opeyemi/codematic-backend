@@ -407,7 +407,20 @@
 		},
 		{
 			"name": "webhooks",
-			"item": [],
+			"item": [
+				{
+					"name": "webhook_url",
+					"id": "44470642-582da59c-5c7a-48ac-8e43-9bfbf0a24b1a",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				}
+			],
 			"id": "44470642-df8b2f76-8935-4c8d-9ac9-867927176fa6"
 		}
 	],
