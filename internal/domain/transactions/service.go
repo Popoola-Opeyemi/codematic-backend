@@ -2,22 +2,29 @@ package transactions
 
 import (
 	"codematic/internal/infrastructure/cache"
+	"codematic/internal/infrastructure/db"
+
 	"context"
 	"time"
 )
 
 // service implements the business logic for transaction-related operations.
 type service struct {
-	repo  Repository
+	DB   *db.DBConn
+	Repo Repository
+
 	cache cache.TransactionCacheStore
 }
 
 // NewService initializes and returns a new instance of the transaction service.
 func NewService(
-	repo Repository,
+	db *db.DBConn,
 	cacheStore cache.TransactionCacheStore,
 ) Service {
-	return &service{repo: repo, cache: cacheStore}
+	return &service{
+		Repo:  NewRepository(db.Queries, db.Pool),
+		cache: cacheStore,
+	}
 }
 
 func (s *service) GetTransactionByID(ctx context.Context, id string) (*Transaction, error) {
@@ -28,7 +35,7 @@ func (s *service) GetTransactionByID(ctx context.Context, id string) (*Transacti
 			return &tx, nil
 		}
 	}
-	dbTx, err := s.repo.GetTransactionByID(ctx, id)
+	dbTx, err := s.Repo.GetTransactionByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +56,7 @@ func (s *service) ListTransactionsByUserID(ctx context.Context,
 		}
 	}
 
-	dbTxns, err := s.repo.ListTransactionsByUserID(ctx, userID, limit, offset)
+	dbTxns, err := s.Repo.ListTransactionsByUserID(ctx, userID, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +79,7 @@ func (s *service) ListTransactionsByTenantID(ctx context.Context,
 		}
 	}
 
-	dbTxns, err := s.repo.ListTransactionsByTenantID(ctx, tenantID, limit, offset)
+	dbTxns, err := s.Repo.ListTransactionsByTenantID(ctx, tenantID, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -85,10 +92,10 @@ func (s *service) ListTransactionsByTenantID(ctx context.Context,
 
 func (s *service) ListAllTransactions(ctx context.Context,
 	limit, offset int) ([]*Transaction, error) {
-	return s.repo.ListAllTransactions(ctx, limit, offset)
+	return s.Repo.ListAllTransactions(ctx, limit, offset)
 }
 
 func (s *service) ListTransactionsByStatus(ctx context.Context, status string,
 	limit, offset int) ([]*Transaction, error) {
-	return s.repo.ListTransactionsByStatus(ctx, status, limit, offset)
+	return s.Repo.ListTransactionsByStatus(ctx, status, limit, offset)
 }

@@ -3,6 +3,8 @@ package handler
 import (
 	"codematic/internal/domain/transactions"
 	"codematic/internal/domain/user"
+	"codematic/internal/middleware"
+	"codematic/internal/shared/model"
 	"codematic/internal/shared/utils"
 	"context"
 	"strconv"
@@ -22,7 +24,10 @@ func (h *Transactions) Init(basePath string, env *Environment) error {
 	h.userService = env.Services.User
 
 	group := env.Fiber.Group(basePath + "/transactions")
-	protected := group
+	protected := group.Use(middleware.JWTMiddleware(
+		env.JWTManager,
+		env.CacheManager,
+	))
 
 	protected.Get("/:id", h.GetTransactionByID)
 	protected.Get("/", h.ListTransactions)
@@ -77,17 +82,17 @@ func (h *Transactions) GetTransactionByID(c *fiber.Ctx) error {
 	// Access control
 	switch role {
 
-	case transactions.RoleUser:
+	case model.RoleUser.String():
 		if tx.WalletID != userID {
 			return utils.SendErrorResponse(c, fiber.StatusForbidden, "forbidden")
 		}
 
-	case transactions.RoleTenantAdmin:
+	case model.RoleTenantAdmin.String():
 		if tx.TenantID != tenantID {
 			return utils.SendErrorResponse(c, fiber.StatusForbidden, "forbidden")
 		}
 
-	case transactions.RoleAdmin:
+	case model.RolePlatformAdmin.String():
 	default:
 		return utils.SendErrorResponse(c, fiber.StatusForbidden, "forbidden")
 	}
@@ -131,19 +136,22 @@ func (h *Transactions) ListTransactions(c *fiber.Ctx) error {
 
 	var err error
 
+	h.env.Logger.Sugar().Debug("ListTransactions role is ", role)
+
 	switch role {
 
-	case transactions.RoleUser:
+	case model.RoleUser.String():
+
 		txs, err = h.service.ListTransactionsByUserID(c.Context(), userID, limit, offset)
 
-	case transactions.RoleTenantAdmin:
+	case model.RoleTenantAdmin.String():
 		if status != "" {
 			txs, err = h.service.ListTransactionsByStatus(c.Context(), status, limit, offset)
 		} else {
 			txs, err = h.service.ListTransactionsByTenantID(c.Context(), tenantID, limit, offset)
 		}
 
-	case transactions.RoleAdmin:
+	case model.RolePlatformAdmin.String():
 		if status != "" {
 			txs, err = h.service.ListTransactionsByStatus(c.Context(), status, limit, offset)
 		}

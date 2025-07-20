@@ -79,15 +79,18 @@ func InitServices(
 		kafkaProducer,
 	)
 
+	transactionsService := transactions.NewService(store, cacheManager)
+
 	logger.Info("services initialized.")
 
 	return &Services{
-		Wallet:   walletService,
-		User:     userService,
-		Provider: providerService,
-		Tenants:  tenantsService,
-		Auth:     authService,
-		Webhook:  webhookService,
+		Wallet:       walletService,
+		User:         userService,
+		Provider:     providerService,
+		Tenants:      tenantsService,
+		Auth:         authService,
+		Transactions: transactionsService,
+		Webhook:      webhookService,
 	}
 }
 
