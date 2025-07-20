@@ -21,6 +21,9 @@ type Service interface {
 	CreateWalletForNewUser(ctx context.Context,
 		userID string) ([]*Wallet, error)
 	WithTx(q *db.Queries) Service
+
+	// Kafka event handler
+	HandlePaystackKafkaEvent(ctx context.Context, key, value []byte)
 }
 
 type Repository interface {

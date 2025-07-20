@@ -21,9 +21,15 @@ import (
 	"codematic/internal/shared/model"
 
 	"codematic/internal/shared/utils"
+	"context"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"codematic/internal/consumers"
+	"codematic/internal/domain/provider"
+	"codematic/internal/domain/user"
+	"codematic/internal/domain/wallet"
 )
 
 func main() {
@@ -68,6 +74,13 @@ func main() {
 		cacheManager,
 		kafkaProducer,
 	)
+
+	// Set up Kafka consumer for Paystack wallet events
+	walletProvider := provider.NewService(store, cacheManager, zapLogger.Logger, kafkaProducer)
+	userService := user.NewService(store, JWTManager, zapLogger.Logger)
+	walletService := wallet.NewService(walletProvider, userService, store, zapLogger.Logger, kafkaProducer)
+
+	consumers.StartWalletPaystackConsumer(context.Background(), broker, walletService, zapLogger.Logger)
 
 	router.InitHandlers(env, []handler.IHandler{
 		&handler.Auth{},

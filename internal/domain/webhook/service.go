@@ -84,10 +84,16 @@ func (s *service) handlePaystackEvent(
 ) error {
 	s.logger.Sugar().Infof("Paystack event received: %+v", event)
 
-	// Example Kafka publish (if used):
-	// return s.Producer.Publish("paystack.webhooks", rawPayload)
+	// Extract event type as key if available
+	key := ""
+	if evt, ok := event["event"]; ok {
+		if str, ok := evt.(string); ok {
+			key = str
+		}
+	}
 
-	return nil
+	// Emit event to Kafka for wallet service to process
+	return s.Producer.Publish(ctx, kafka.PaystackWalletEventTopic, key, rawPayload)
 }
 
 func (s *service) handleFlutterwaveEvent(

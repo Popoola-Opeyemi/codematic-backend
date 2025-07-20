@@ -10,7 +10,7 @@ import (
 	"codematic/internal/domain/user"
 	"codematic/internal/infrastructure/db"
 	dbsqlc "codematic/internal/infrastructure/db/sqlc"
-	kafka "codematic/internal/infrastructure/events/kafka"
+	"codematic/internal/infrastructure/events/kafka"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -249,4 +249,9 @@ func (s *WalletService) GetTransactions(ctx context.Context,
 func (s *WalletService) GetWalletTypeIDByCurrency(ctx context.Context,
 	currency string) (string, error) {
 	return s.Repo.GetWalletTypeIDByCurrency(ctx, currency)
+}
+
+func (s *WalletService) HandlePaystackKafkaEvent(ctx context.Context, key, value []byte) {
+	s.logger.Sugar().Infof("Received Paystack wallet event from Kafka. Key: %s, Value: %s", string(key), string(value))
+	// TODO: Parse value and process the event (e.g., update wallet, create transaction, etc.)
 }
