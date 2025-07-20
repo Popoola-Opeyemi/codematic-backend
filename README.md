@@ -11,18 +11,6 @@
 
 Codematic is built in Go, fully Dockerized, and leverages PostgreSQL, Redis, and Kafka for persistence, caching, and event streaming. It provides a clean, well-documented API and is ready for local development or cloud deployment.
 
-## Architecture
-
-- **Go Fiber**: High-performance web framework for REST APIs
-- **Domain-Driven Design**: Clear separation of domain logic, infrastructure, and handlers
-- **Provider Abstraction**: Easily add new payment providers by implementing a common interface
-- **Multi-Tenancy**: Tenant isolation at the DB and API level
-- **Idempotency**: Ensured for all transaction-related endpoints
-- **Event-Driven**: Kafka for event streaming and async processing
-- **Extensible**: Add background jobs, Redis caching, audit logs, and more with minimal changes
-- **Swagger/OpenAPI**: Auto-generated API documentation
-- **Dockerized**: For local and production-ready deployments
-
 ## 🔧 Project Structure
 
 ```
@@ -249,10 +237,6 @@ sqlc generate
 go run cmd/main.go
 ```
 
-### Testing
-
-Tests follow Go's `*_test.go` convention. Place tests in the relevant package directories.
-
 ## 📦 Tech Stack
 
 - **Go (Fiber v2)** — Web framework
@@ -268,4 +252,117 @@ Tests follow Go's `*_test.go` convention. Place tests in the relevant package di
 ## 📜 License
 
 MIT License — Free to use, modify, and contribute. 
+
+# Developer Usage Guide
+
+Welcome to the Codematic Backend! This section provides a concise guide for setup, development workflow, and key conventions.
+
+---
+
+## 🚀 Getting Started
+
+### 1. Clone the Repository
+```sh
+git clone <your-repo-url>
+cd codematic-backend
+```
+
+### 2. Environment Setup
+- **Go version:** Ensure Go 1.20+ is installed.
+- **Dependencies:**  
+  ```sh
+  go mod download
+  ```
+
+### 3. Configuration
+- Copy and edit your environment config as needed:
+  ```sh
+  cp .env.example .env
+  # Edit .env with your DB, cache, and other secrets
+  ```
+
+### 4. Database
+- **Migrations:**  
+  ```sh
+  go run cmd/migrate/main.go
+  ```
+- **SQLC:**  
+  All DB queries are managed via [sqlc](https://sqlc.dev/).  
+  To regenerate Go code from SQL:
+  ```sh
+  sqlc generate
+  ```
+
+### 5. Running the App
+```sh
+go run cmd/main.go
+```
+Or use Docker Compose:
+```sh
+docker-compose up --build
+```
+
+---
+
+## 🗂️ Project Structure
+
+- `cmd/` – Entrypoints (main, migrations)
+- `internal/`
+  - `app/` – Bootstrap logic
+  - `config/` – Configuration & logging
+  - `domain/` – Business logic (auth, tenants, wallet, etc.)
+  - `handler/` – HTTP handlers (Fiber)
+  - `infrastructure/` – DB, cache, events, third-party integrations
+  - `middleware/` – Fiber middleware
+  - `router/` – HTTP server & routes
+  - `shared/` – Common models & utilities
+
+---
+
+## 🧑‍💻 Development Workflow
+
+- **HTTP Handlers:**  
+  Follow the style in `internal/handler/wallet.go` for clean, consistent handlers.
+- **Database Access:**  
+  Use the repository pattern and sqlc-generated code (see `internal/infrastructure/db/sqlc/`).
+- **Kafka Topics:**  
+  Define all topics centrally in `internal/infrastructure/events/kafka/topics.go`.
+- **Authentication:**  
+  - `/auth/login` for tenant users (including tenant admins)
+  - `/auth/admin` for platform admins  
+  Check user roles after login.
+
+---
+
+## 🛠️ Useful Commands
+
+- **Lint:**  
+  ```sh
+  golangci-lint run
+  ```
+- **Generate SQLC code:**  
+  ```sh
+  sqlc generate
+  ```
+
+---
+
+## 📚 Documentation
+
+- API docs: See `docs/swagger.yaml` or `docs/swagger.json`
+- Postman collection: `postman/collections/`
+
+---
+
+## 🤝 Contributing
+
+1. Fork & branch from `main`
+2. Follow code style and conventions
+3. Open a PR with a clear description
+
+---
+
+For more details, see the [README.md](./README.md)
+
+--- 
 
