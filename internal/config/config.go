@@ -53,7 +53,7 @@ func LoadAppConfig() *Config {
 	}
 
 	config := Config{
-		KAFKA_BROKER_URL:      os.Getenv("KAFKA_BROKER_URL"),
+		KAFKA_BROKER:          os.Getenv("KAFKA_BROKER"),
 		PostgresDB:            os.Getenv("POSTGRES_DB"),
 		PostgresUser:          os.Getenv("POSTGRES_USER"),
 		PostgresPass:          os.Getenv("POSTGRES_PASSWORD"),

@@ -7,7 +7,8 @@ FROM golang:1.24-alpine AS base
 
 ENV CGO_ENABLED=0 \
     GOOS=linux \
-    GOARCH=amd64
+    GOARCH=amd64 \
+    GOBIN=/go/bin
 
 WORKDIR /app
 
@@ -16,7 +17,15 @@ RUN apk add --no-cache git tzdata ca-certificates
 COPY go.mod go.sum ./
 RUN go mod download
 
+# Install sqlc (unset GOOS and GOARCH for correct platform binary)
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    env -u GOOS -u GOARCH go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+
 COPY . .
+
+# Generate SQLC code
+RUN /go/bin/sqlc generate
 
 ##############################
 # STAGE 2: Dev image with Air and Swag
@@ -29,7 +38,7 @@ RUN apk add --no-cache curl && \
     mv ./bin/air /usr/local/bin/ && \
     rm -rf ./bin
 
-# ✅ Install swag CLI (Swagger/OpenAPI generator)
+# Install swag CLI (Swagger/OpenAPI generator)
 # We unset GOOS and GOARCH temporarily so Go installs a binary for this container's platform
 RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg/mod \
@@ -55,6 +64,9 @@ RUN go build -ldflags="-X 'main.gitHash=${GIT_HASH}' -X 'main.buildTime=${BUILD_
 ##############################
 # STAGE 4: Final minimal production image
 ##############################
+FROM builder AS migrate-builder
+RUN go build -o migrate ./cmd/migrate
+
 FROM scratch AS prod
 
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
@@ -64,7 +76,9 @@ COPY --from=builder /etc/passwd /etc/passwd
 WORKDIR /app
 
 COPY --from=builder /app/codematic /app/codematic
+COPY --from=migrate-builder /app/migrate /app/migrate
 
 USER 1000
 EXPOSE 8080
-ENTRYPOINT ["./codematic"]
+
+ENTRYPOINT ["/bin/sh", "-c", "/app/migrate && ./codematic"]

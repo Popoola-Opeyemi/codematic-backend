@@ -48,8 +48,7 @@ func main() {
 		redisCache,
 	)
 
-	broker := os.Getenv("KAFKA_BROKER")
-	kafkaProducer := kafka.NewKafkaProducer(broker)
+	kafkaProducer := kafka.NewKafkaProducer(cfg.KAFKA_BROKER)
 	events.Init(kafkaProducer)
 
 	appEnv := router.InitRouterWithConfig(cfg, redisCache, zapLogger.Logger)
@@ -68,7 +67,7 @@ func main() {
 	app.InitScheduler(zapLogger.Logger)
 
 	// Start consumers
-	app.StartConsumers(context.Background(), broker, services, zapLogger.Logger)
+	app.StartConsumers(context.Background(), cfg.KAFKA_BROKER, services, zapLogger.Logger)
 
 	env := handler.NewEnvironment(
 		cfg,

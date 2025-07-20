@@ -1,7 +1,7 @@
 package config
 
 type Config struct {
-	KAFKA_BROKER_URL      string `mapstructure:"KAFKA_BROKER_URL"`
+	KAFKA_BROKER          string `mapstructure:"KAFKA_BROKER"`
 	PostgresDB            string `mapstructure:"POSTGRES_DB"`
 	PostgresUser          string `mapstructure:"POSTGRES_USER"`
 	PostgresPass          string `mapstructure:"POSTGRES_PASSWORD"`

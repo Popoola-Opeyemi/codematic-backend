@@ -110,7 +110,6 @@ func RunWithGracefulShutdown(app *fiber.App, port string, zapLogger *zap.Logger)
 
 	fmt.Println("Shutting down server...")
 
-	// Shutdown the app with a timeout context if needed
 	if err := app.Shutdown(); err != nil {
 		log.Fatalf("Server forced to shutdown: %v", err)
 	}
