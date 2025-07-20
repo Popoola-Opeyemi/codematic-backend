@@ -590,7 +590,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{API_BASE_URL}}/transactions?staus=pending",
+							"raw": "{{API_BASE_URL}}/transactions?status=pending",
 							"host": [
 								"{{API_BASE_URL}}"
 							],
@@ -599,7 +599,7 @@
 							],
 							"query": [
 								{
-									"key": "staus",
+									"key": "status",
 									"value": "pending"
 								}
 							]
