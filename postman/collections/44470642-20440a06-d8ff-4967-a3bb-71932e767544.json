@@ -92,7 +92,7 @@
 							"bearer": [
 								{
 									"key": "token",
-									"value": "{{tenant_admin_authorization}}",
+									"value": "{{user_authorization}}",
 									"type": "string"
 								}
 							]
