@@ -418,7 +418,7 @@
 						"method": "POST",
 						"header": [],
 						"url": {
-							"raw": "https://civil-shrew-subtle.ngrok-free.app/ai/webhook",
+							"raw": "https://civil-shrew-subtle.ngrok-free.app/api/webhook",
 							"protocol": "https",
 							"host": [
 								"civil-shrew-subtle",
@@ -426,7 +426,7 @@
 								"app"
 							],
 							"path": [
-								"ai",
+								"api",
 								"webhook"
 							]
 						}
