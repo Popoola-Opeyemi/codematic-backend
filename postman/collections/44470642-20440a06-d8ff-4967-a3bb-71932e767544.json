@@ -599,12 +599,13 @@
 							}
 						},
 						"url": {
-							"raw": "{{API_BASE_URL}}/transactions",
+							"raw": "{{API_BASE_URL}}/transactions/all",
 							"host": [
 								"{{API_BASE_URL}}"
 							],
 							"path": [
-								"transactions"
+								"transactions",
+								"all"
 							]
 						}
 					},
