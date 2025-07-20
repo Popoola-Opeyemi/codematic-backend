@@ -29,10 +29,10 @@ func (h *Wallet) Init(basePath string, env *Environment) error {
 	userService := user.NewService(env.DB, env.JWTManager, env.Logger)
 
 	h.service = wallet.NewService(
+		env.Logger,
 		providerService,
 		userService,
 		env.DB,
-		env.Logger,
 		env.KafkaProducer,
 	)
 	h.userService = userService

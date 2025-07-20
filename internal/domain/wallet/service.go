@@ -29,9 +29,11 @@ type WalletService struct {
 	Producer *kafka.KafkaProducer
 }
 
-func NewService(Provider provider.Service,
+func NewService(
+	logger *zap.Logger,
+	Provider provider.Service,
 	User user.Service,
-	db *db.DBConn, logger *zap.Logger,
+	db *db.DBConn,
 	producer *kafka.KafkaProducer) Service {
 	return &WalletService{
 		DB:       db,

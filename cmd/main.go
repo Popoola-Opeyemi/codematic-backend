@@ -26,10 +26,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"codematic/internal/consumers"
-	"codematic/internal/domain/provider"
-	"codematic/internal/domain/user"
-	"codematic/internal/domain/wallet"
+	"codematic/internal/app"
 )
 
 func main() {
@@ -39,7 +36,6 @@ func main() {
 	defer zapLogger.Close()
 
 	redisCache := cache.InitRedis(cfg)
-
 	defer redisCache.Close()
 
 	store := db.InitDB(cfg, zapLogger.Logger)
@@ -53,19 +49,32 @@ func main() {
 		redisCache,
 	)
 
-	// setup for Kafka
 	broker := os.Getenv("KAFKA_BROKER")
 	kafkaProducer := kafka.NewKafkaProducer(broker)
 	events.Init(kafkaProducer)
 
-	// App environment
-	app := router.InitRouterWithConfig(cfg, redisCache, zapLogger.Logger)
+	appEnv := router.InitRouterWithConfig(cfg, redisCache, zapLogger.Logger)
+
+	// Initialize services
+	services := app.InitServices(
+		zapLogger.Logger,
+		store,
+		cacheManager,
+		JWTManager,
+		kafkaProducer,
+	)
+
+	// Initialize scheduler
+	app.InitScheduler(zapLogger.Logger)
+
+	// Start consumers
+	app.StartConsumers(context.Background(), broker, services, zapLogger.Logger)
 
 	providers := &model.Providers{}
 
 	env := handler.NewEnvironment(
 		cfg,
-		app,
+		appEnv,
 		store,
 		redisCache,
 		zapLogger.Logger,
@@ -75,13 +84,6 @@ func main() {
 		kafkaProducer,
 	)
 
-	// Set up Kafka consumer for Paystack wallet events
-	walletProvider := provider.NewService(store, cacheManager, zapLogger.Logger, kafkaProducer)
-	userService := user.NewService(store, JWTManager, zapLogger.Logger)
-	walletService := wallet.NewService(walletProvider, userService, store, zapLogger.Logger, kafkaProducer)
-
-	consumers.StartWalletPaystackConsumer(context.Background(), broker, walletService, zapLogger.Logger)
-
 	router.InitHandlers(env, []handler.IHandler{
 		&handler.Auth{},
 		&handler.Tenants{},
@@ -89,14 +91,11 @@ func main() {
 		&handler.Webhook{},
 	})
 
-	// Graceful shutdown support
 	go func() {
-		router.RunWithGracefulShutdown(app, cfg.PORT)
+		router.RunWithGracefulShutdown(appEnv, cfg.PORT)
 	}()
 
-	// Wait for termination signal.
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-
 }
