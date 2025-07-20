@@ -208,7 +208,8 @@ func (r *walletRepository) CreateWalletsForNewUserFromAvailableWallets(ctx conte
 	return wallets, nil
 }
 
-func (r *walletRepository) GetWalletByUserAndCurrency(ctx context.Context, userID string, currency string) (*Wallet, error) {
+func (r *walletRepository) GetWalletByUserAndCurrency(ctx context.Context,
+	userID, currency string) (*Wallet, error) {
 	userUUID, err := utils.StringToPgUUID(userID)
 	if err != nil {
 		return nil, err
@@ -266,4 +267,92 @@ func (r *walletRepository) UpdateTransactionStatusAndAmount(ctx context.Context,
 		Amount: amount,
 		ID:     uid,
 	})
+}
+
+func (r *walletRepository) CreateDeposit(ctx context.Context, deposit *Deposit) error {
+	userUUID, _ := utils.StringToPgUUID(deposit.UserID)
+	transactionUUID, _ := utils.StringToPgUUID(deposit.TransactionID)
+	extTxid := utils.ToPgxText(deposit.ExternalTxID)
+	amount := decimal.NewFromFloat(deposit.Amount)
+	params := db.CreateDepositParams{
+		UserID:        userUUID,
+		TransactionID: transactionUUID,
+		ExternalTxid:  extTxid,
+		Amount:        amount,
+		Status:        deposit.Status,
+		CreatedAt:     utils.ToPgxTstamp(deposit.CreatedAt),
+		UpdatedAt:     utils.ToPgxTstamp(deposit.UpdatedAt),
+	}
+	row, err := r.q.CreateDeposit(ctx, params)
+	if err != nil {
+		return err
+	}
+	deposit.ID = int(row.ID)
+	return nil
+}
+
+func (r *walletRepository) GetDepositByID(ctx context.Context, id int) (*Deposit, error) {
+	row, err := r.q.GetDepositByID(ctx, int32(id))
+	if err != nil {
+		return nil, err
+	}
+	extTxid := utils.FromPgText(row.ExternalTxid)
+	var extTxidStr string
+	if extTxid != nil {
+		extTxidStr = *extTxid
+	}
+	return &Deposit{
+		ID:            int(row.ID),
+		UserID:        utils.FromPgUUID(row.UserID),
+		TransactionID: utils.FromPgUUID(row.TransactionID),
+		ExternalTxID:  extTxidStr,
+		Amount:        row.Amount.InexactFloat64(),
+		Status:        row.Status,
+		CreatedAt:     utils.FromPgTimestamp(row.CreatedAt),
+		UpdatedAt:     utils.FromPgTimestamp(row.UpdatedAt),
+	}, nil
+}
+
+func (r *walletRepository) CreateWithdrawal(ctx context.Context, withdrawal *Withdrawal) error {
+	userUUID, _ := utils.StringToPgUUID(withdrawal.UserID)
+	transactionUUID, _ := utils.StringToPgUUID(withdrawal.TransactionID)
+	extTxid := utils.ToPgxText(withdrawal.ExternalTxID)
+	amount := decimal.NewFromFloat(withdrawal.Amount)
+	params := db.CreateWithdrawalParams{
+		UserID:        userUUID,
+		TransactionID: transactionUUID,
+		ExternalTxid:  extTxid,
+		Amount:        amount,
+		Status:        withdrawal.Status,
+		CreatedAt:     utils.ToPgxTstamp(withdrawal.CreatedAt),
+		UpdatedAt:     utils.ToPgxTstamp(withdrawal.UpdatedAt),
+	}
+	row, err := r.q.CreateWithdrawal(ctx, params)
+	if err != nil {
+		return err
+	}
+	withdrawal.ID = int(row.ID)
+	return nil
+}
+
+func (r *walletRepository) GetWithdrawalByID(ctx context.Context, id int) (*Withdrawal, error) {
+	row, err := r.q.GetWithdrawalByID(ctx, int32(id))
+	if err != nil {
+		return nil, err
+	}
+	extTxid := utils.FromPgText(row.ExternalTxid)
+	var extTxidStr string
+	if extTxid != nil {
+		extTxidStr = *extTxid
+	}
+	return &Withdrawal{
+		ID:            int(row.ID),
+		UserID:        utils.FromPgUUID(row.UserID),
+		TransactionID: utils.FromPgUUID(row.TransactionID),
+		ExternalTxID:  extTxidStr,
+		Amount:        row.Amount.InexactFloat64(),
+		Status:        row.Status,
+		CreatedAt:     utils.FromPgTimestamp(row.CreatedAt),
+		UpdatedAt:     utils.FromPgTimestamp(row.UpdatedAt),
+	}, nil
 }

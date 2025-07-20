@@ -29,6 +29,17 @@ type Currency struct {
 	UpdatedAt pgtype.Timestamptz
 }
 
+type Deposit struct {
+	ID            int32
+	UserID        pgtype.UUID
+	TransactionID pgtype.UUID
+	ExternalTxid  pgtype.Text
+	Amount        decimal.Decimal
+	Status        string
+	CreatedAt     pgtype.Timestamp
+	UpdatedAt     pgtype.Timestamp
+}
+
 type IdempotencyKey struct {
 	ID             pgtype.UUID
 	TenantID       pgtype.UUID
@@ -163,6 +174,7 @@ type WebhookEvent struct {
 	ProviderID      pgtype.UUID
 	ProviderEventID string
 	TenantID        pgtype.UUID
+	IsOutgoing      pgtype.Bool
 	EventType       string
 	Payload         json.RawMessage
 	Status          string
@@ -170,4 +182,15 @@ type WebhookEvent struct {
 	LastError       pgtype.Text
 	CreatedAt       pgtype.Timestamptz
 	UpdatedAt       pgtype.Timestamptz
+}
+
+type Withdrawal struct {
+	ID            int32
+	UserID        pgtype.UUID
+	TransactionID pgtype.UUID
+	ExternalTxid  pgtype.Text
+	Amount        decimal.Decimal
+	Status        string
+	CreatedAt     pgtype.Timestamp
+	UpdatedAt     pgtype.Timestamp
 }

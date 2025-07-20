@@ -24,6 +24,14 @@ type Service interface {
 
 	// Kafka event handler
 	HandlePaystackKafkaEvent(ctx context.Context, key, value []byte)
+
+	// Deposit operations
+	CreateDeposit(ctx context.Context, deposit *Deposit) error
+	GetDepositByID(ctx context.Context, id int) (*Deposit, error)
+
+	// Withdrawal operations
+	CreateWithdrawal(ctx context.Context, withdrawal *Withdrawal) error
+	GetWithdrawalByID(ctx context.Context, id int) (*Withdrawal, error)
 }
 
 type Repository interface {

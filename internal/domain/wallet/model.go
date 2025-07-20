@@ -112,6 +112,30 @@ type (
 		Provider         string `json:"provider"`
 		ProviderID       string `json:"provider_id"`
 	}
+
+	// Deposit represents a wallet deposit record
+	Deposit struct {
+		ID            int       `json:"id"`
+		UserID        string    `json:"user_id"`
+		TransactionID string    `json:"transaction_id"`
+		ExternalTxID  string    `json:"external_txid"`
+		Amount        float64   `json:"amount"`
+		Status        string    `json:"status"`
+		CreatedAt     time.Time `json:"created_at"`
+		UpdatedAt     time.Time `json:"updated_at"`
+	}
+
+	// Withdrawal represents a wallet withdrawal record
+	Withdrawal struct {
+		ID            int       `json:"id"`
+		UserID        string    `json:"user_id"`
+		TransactionID string    `json:"transaction_id"`
+		ExternalTxID  string    `json:"external_txid"`
+		Amount        float64   `json:"amount"`
+		Status        string    `json:"status"`
+		CreatedAt     time.Time `json:"created_at"`
+		UpdatedAt     time.Time `json:"updated_at"`
+	}
 )
 
 func (c Channel) IsValid() bool {

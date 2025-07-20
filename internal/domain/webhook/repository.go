@@ -53,6 +53,7 @@ func (r *webhookRepository) Create(ctx context.Context, event *WebhookEvent) err
 		LastError:       utils.ToDBString(&event.LastError),
 		CreatedAt:       utils.ToPgTimestamptz(event.CreatedAt),
 		UpdatedAt:       utils.ToPgTimestamptz(event.UpdatedAt),
+		IsOutgoing:      utils.ToPgxBool(event.IsOutgoing),
 	})
 	if err != nil {
 		return err

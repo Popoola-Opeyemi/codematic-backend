@@ -1,8 +1,10 @@
 package webhook
 
 import (
+	"bytes"
 	"codematic/internal/config"
 	"codematic/internal/domain/provider"
+	"codematic/internal/domain/tenants"
 	"codematic/internal/infrastructure/db"
 	"codematic/internal/infrastructure/events/kafka"
 	"codematic/internal/shared/model"
@@ -12,7 +14,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
+	"time"
+
+	"github.com/google/uuid"
 
 	"go.uber.org/zap"
 )
@@ -23,28 +29,31 @@ const (
 )
 
 type service struct {
-	DB       *db.DBConn
-	Repo     Repository
-	Provider provider.Service
-	logger   *zap.Logger
-	cfg      *config.Config
-	Producer *kafka.KafkaProducer
+	DB            *db.DBConn
+	Repo          Repository
+	Provider      provider.Service
+	tenantService tenants.Service
+	logger        *zap.Logger
+	cfg           *config.Config
+	Producer      *kafka.KafkaProducer
 }
 
 func NewService(
 	Provider provider.Service,
+	tenantService tenants.Service,
 	logger *zap.Logger,
 	db *db.DBConn,
 	cfg *config.Config,
 	producer *kafka.KafkaProducer,
 ) Service {
 	return &service{
-		DB:       db,
-		Repo:     NewRepository(db.Queries, db.Pool),
-		Provider: Provider,
-		logger:   logger,
-		cfg:      cfg,
-		Producer: producer,
+		DB:            db,
+		Repo:          NewRepository(db.Queries, db.Pool),
+		Provider:      Provider,
+		tenantService: tenantService,
+		logger:        logger,
+		cfg:           cfg,
+		Producer:      producer,
 	}
 }
 
@@ -154,4 +163,73 @@ func getHeader(headers map[string]string, key string) string {
 		}
 	}
 	return ""
+}
+
+func (s *service) StartWalletDepositSuccessConsumer(ctx context.Context,
+	broker string) {
+	go func() {
+		groupID := "webhook-wallet-deposit-success-group"
+		err := kafka.Subscribe(ctx, broker, kafka.WalletDepositSuccessTopic, groupID, func(key, value []byte) {
+			s.logger.Sugar().Infof("Received wallet deposit success event: %s", string(value))
+
+			// Parse event
+			var event event
+			if err := json.Unmarshal(value, &event); err != nil {
+				s.logger.Sugar().Errorf("Failed to parse deposit event: %v", err)
+				return
+			}
+
+			// Get tenant webhook URL
+			tenant, err := s.tenantService.GetTenantByID(ctx, event.TenantID)
+			if err != nil {
+				s.logger.Sugar().Errorf("Failed to get tenant for webhook: %v", err)
+				return
+			}
+			if tenant.WebhookURL == "" {
+				s.logger.Sugar().Warnf("No webhook URL for tenant %s", event.TenantID)
+				return
+			}
+
+			// Save outgoing webhook event to DB
+			webhookEvent := &WebhookEvent{
+				ID:         uuid.NewString(),
+				TenantID:   event.TenantID,
+				EventType:  "wallet.deposit.success",
+				Payload:    value,
+				Status:     "pending",
+				Attempts:   0,
+				CreatedAt:  time.Now(),
+				UpdatedAt:  time.Now(),
+				IsOutgoing: true,
+			}
+			err = s.Repo.Create(ctx, webhookEvent)
+			if err != nil {
+				s.logger.Sugar().Errorf("Failed to save outgoing webhook event: %v", err)
+				return
+			}
+
+			// Send HTTP POST to tenant webhook URL
+			resp, err := http.Post(tenant.WebhookURL, "application/json", bytes.NewReader(value))
+			if err != nil {
+				s.logger.Sugar().Errorf("Failed to send webhook to tenant: %v", err)
+				webhookEvent.Status = "failed"
+				webhookEvent.Attempts++
+				webhookEvent.UpdatedAt = time.Now()
+				s.Repo.Create(ctx, webhookEvent) // Optionally update status
+				return
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+				webhookEvent.Status = "success"
+			} else {
+				webhookEvent.Status = "failed"
+			}
+			webhookEvent.Attempts++
+			webhookEvent.UpdatedAt = time.Now()
+			s.Repo.Create(ctx, webhookEvent) // Optionally update status
+		})
+		if err != nil {
+			s.logger.Sugar().Errorf("Failed to subscribe to wallet deposit success events: %v", err)
+		}
+	}()
 }

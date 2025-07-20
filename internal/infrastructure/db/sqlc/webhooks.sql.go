@@ -14,11 +14,11 @@ import (
 
 const createWebhookEvent = `-- name: CreateWebhookEvent :one
 INSERT INTO webhook_events (
-  id, provider_id, provider_event_id, tenant_id, event_type, payload, status, attempts, last_error, created_at, updated_at
+  id, provider_id, provider_event_id, tenant_id, event_type, payload, status, attempts, last_error, created_at, updated_at, is_outgoing
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
 )
-RETURNING id, provider_id, provider_event_id, tenant_id, event_type, payload, status, attempts, last_error, created_at, updated_at
+RETURNING id, provider_id, provider_event_id, tenant_id, is_outgoing, event_type, payload, status, attempts, last_error, created_at, updated_at
 `
 
 type CreateWebhookEventParams struct {
@@ -33,6 +33,7 @@ type CreateWebhookEventParams struct {
 	LastError       pgtype.Text
 	CreatedAt       pgtype.Timestamptz
 	UpdatedAt       pgtype.Timestamptz
+	IsOutgoing      pgtype.Bool
 }
 
 func (q *Queries) CreateWebhookEvent(ctx context.Context, arg CreateWebhookEventParams) (WebhookEvent, error) {
@@ -48,6 +49,7 @@ func (q *Queries) CreateWebhookEvent(ctx context.Context, arg CreateWebhookEvent
 		arg.LastError,
 		arg.CreatedAt,
 		arg.UpdatedAt,
+		arg.IsOutgoing,
 	)
 	var i WebhookEvent
 	err := row.Scan(
@@ -55,6 +57,7 @@ func (q *Queries) CreateWebhookEvent(ctx context.Context, arg CreateWebhookEvent
 		&i.ProviderID,
 		&i.ProviderEventID,
 		&i.TenantID,
+		&i.IsOutgoing,
 		&i.EventType,
 		&i.Payload,
 		&i.Status,
@@ -67,7 +70,7 @@ func (q *Queries) CreateWebhookEvent(ctx context.Context, arg CreateWebhookEvent
 }
 
 const getWebhookEventByProviderAndEventID = `-- name: GetWebhookEventByProviderAndEventID :one
-SELECT id, provider_id, provider_event_id, tenant_id, event_type, payload, status, attempts, last_error, created_at, updated_at FROM webhook_events WHERE provider_id = $1 AND provider_event_id = $2
+SELECT id, provider_id, provider_event_id, tenant_id, is_outgoing, event_type, payload, status, attempts, last_error, created_at, updated_at FROM webhook_events WHERE provider_id = $1 AND provider_event_id = $2
 `
 
 type GetWebhookEventByProviderAndEventIDParams struct {
@@ -83,6 +86,7 @@ func (q *Queries) GetWebhookEventByProviderAndEventID(ctx context.Context, arg G
 		&i.ProviderID,
 		&i.ProviderEventID,
 		&i.TenantID,
+		&i.IsOutgoing,
 		&i.EventType,
 		&i.Payload,
 		&i.Status,
@@ -95,7 +99,7 @@ func (q *Queries) GetWebhookEventByProviderAndEventID(ctx context.Context, arg G
 }
 
 const listFailedWebhookEvents = `-- name: ListFailedWebhookEvents :many
-SELECT id, provider_id, provider_event_id, tenant_id, event_type, payload, status, attempts, last_error, created_at, updated_at FROM webhook_events WHERE status = 'failed'
+SELECT id, provider_id, provider_event_id, tenant_id, is_outgoing, event_type, payload, status, attempts, last_error, created_at, updated_at FROM webhook_events WHERE status = 'failed'
 `
 
 func (q *Queries) ListFailedWebhookEvents(ctx context.Context) ([]WebhookEvent, error) {
@@ -112,6 +116,7 @@ func (q *Queries) ListFailedWebhookEvents(ctx context.Context) ([]WebhookEvent, 
 			&i.ProviderID,
 			&i.ProviderEventID,
 			&i.TenantID,
+			&i.IsOutgoing,
 			&i.EventType,
 			&i.Payload,
 			&i.Status,

@@ -62,3 +62,23 @@ FROM wallets w
 JOIN wallet_types wt ON w.wallet_type_id = wt.id
 WHERE w.user_id = $1 AND wt.currency = $2
 LIMIT 1;
+
+-- name: CreateDeposit :one
+INSERT INTO deposits (user_id, transaction_id, external_txid, amount, status, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, user_id, transaction_id, external_txid, amount, status, created_at, updated_at;
+
+-- name: GetDepositByID :one
+SELECT id, user_id, transaction_id, external_txid, amount, status, created_at, updated_at
+FROM deposits
+WHERE id = $1;
+
+-- name: CreateWithdrawal :one
+INSERT INTO withdrawals (user_id, transaction_id, external_txid, amount, status, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, user_id, transaction_id, external_txid, amount, status, created_at, updated_at;
+
+-- name: GetWithdrawalByID :one
+SELECT id, user_id, transaction_id, external_txid, amount, status, created_at, updated_at
+FROM withdrawals
+WHERE id = $1;

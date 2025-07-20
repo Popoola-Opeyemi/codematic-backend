@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"codematic/internal/domain/provider"
 	"codematic/internal/domain/provider/gateways"
@@ -315,6 +316,17 @@ func (s *WalletService) HandlePaystackKafkaEvent(ctx context.Context, key, value
 		s.logger.Sugar().Errorf("Failed to complete deposit for reference %s: %v", reference, err)
 		return
 	}
+
+	eventt := DepositEvent{
+		TenantID:  tx.TenantID,
+		WalletID:  tx.WalletID,
+		Amount:    amount.String(),
+		Provider:  tx.Provider,
+		Metadata:  tx.Metadata,
+		Timestamp: time.Now(),
+	}
+	payload, _ := json.Marshal(eventt)
+	s.Producer.Publish(ctx, kafka.WalletDepositSuccessTopic, tx.TenantID, payload)
 
 	s.logger.Sugar().Infof("Deposit completed for reference %s, wallet %s, amount %s", reference, tx.WalletID, amount.String())
 }

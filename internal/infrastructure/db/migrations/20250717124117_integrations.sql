@@ -6,6 +6,7 @@ create table "webhook_events" (
   "provider_id" uuid not null references providers(id) on delete cascade,
   "provider_event_id" varchar not null,
   "tenant_id" uuid not null references tenants(id) on delete cascade,
+  is_outgoing boolean DEFAULT false,
   "event_type" varchar not null,
   "payload" jsonb not null,
   "status" varchar not null default 'received', -- 'received', 'processed', 'failed'
@@ -35,6 +36,30 @@ create table "virtual_accounts" (
   "currency" varchar not null,
   "created_at" timestamp with time zone default now() not null,
   "updated_at" timestamp with time zone default now() not null
+);
+
+-- Deposits table
+CREATE TABLE IF NOT EXISTS deposits (
+    id SERIAL PRIMARY KEY,
+    user_id UUID NOT NULL,
+    transaction_id UUID NOT NULL REFERENCES transactions(id),
+    external_txid VARCHAR(255),
+    amount NUMERIC(20, 2) NOT NULL,
+    status VARCHAR(32) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- Withdrawals table
+CREATE TABLE IF NOT EXISTS withdrawals (
+    id SERIAL PRIMARY KEY,
+    user_id UUID NOT NULL,
+    transaction_id UUID NOT NULL REFERENCES transactions(id),
+    external_txid VARCHAR(255),
+    amount NUMERIC(20, 2) NOT NULL,
+    status VARCHAR(32) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 -- +goose statementend

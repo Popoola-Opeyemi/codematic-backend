@@ -12,6 +12,46 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+const createDeposit = `-- name: CreateDeposit :one
+INSERT INTO deposits (user_id, transaction_id, external_txid, amount, status, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, user_id, transaction_id, external_txid, amount, status, created_at, updated_at
+`
+
+type CreateDepositParams struct {
+	UserID        pgtype.UUID
+	TransactionID pgtype.UUID
+	ExternalTxid  pgtype.Text
+	Amount        decimal.Decimal
+	Status        string
+	CreatedAt     pgtype.Timestamp
+	UpdatedAt     pgtype.Timestamp
+}
+
+func (q *Queries) CreateDeposit(ctx context.Context, arg CreateDepositParams) (Deposit, error) {
+	row := q.db.QueryRow(ctx, createDeposit,
+		arg.UserID,
+		arg.TransactionID,
+		arg.ExternalTxid,
+		arg.Amount,
+		arg.Status,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	var i Deposit
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.TransactionID,
+		&i.ExternalTxid,
+		&i.Amount,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const createWallet = `-- name: CreateWallet :one
 INSERT INTO wallets (id, user_id, wallet_type_id, balance)
 VALUES ($1, $2, $3, $4)
@@ -80,6 +120,46 @@ func (q *Queries) CreateWalletWithCurrency(ctx context.Context, arg CreateWallet
 	return i, err
 }
 
+const createWithdrawal = `-- name: CreateWithdrawal :one
+INSERT INTO withdrawals (user_id, transaction_id, external_txid, amount, status, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, user_id, transaction_id, external_txid, amount, status, created_at, updated_at
+`
+
+type CreateWithdrawalParams struct {
+	UserID        pgtype.UUID
+	TransactionID pgtype.UUID
+	ExternalTxid  pgtype.Text
+	Amount        decimal.Decimal
+	Status        string
+	CreatedAt     pgtype.Timestamp
+	UpdatedAt     pgtype.Timestamp
+}
+
+func (q *Queries) CreateWithdrawal(ctx context.Context, arg CreateWithdrawalParams) (Withdrawal, error) {
+	row := q.db.QueryRow(ctx, createWithdrawal,
+		arg.UserID,
+		arg.TransactionID,
+		arg.ExternalTxid,
+		arg.Amount,
+		arg.Status,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	var i Withdrawal
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.TransactionID,
+		&i.ExternalTxid,
+		&i.Amount,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const decrementWalletBalance = `-- name: DecrementWalletBalance :exec
 UPDATE wallets SET balance = balance - $1, updated_at = now() WHERE id = $2
 `
@@ -101,6 +181,28 @@ DELETE FROM wallets WHERE id = $1
 func (q *Queries) DeleteWallet(ctx context.Context, id pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, deleteWallet, id)
 	return err
+}
+
+const getDepositByID = `-- name: GetDepositByID :one
+SELECT id, user_id, transaction_id, external_txid, amount, status, created_at, updated_at
+FROM deposits
+WHERE id = $1
+`
+
+func (q *Queries) GetDepositByID(ctx context.Context, id int32) (Deposit, error) {
+	row := q.db.QueryRow(ctx, getDepositByID, id)
+	var i Deposit
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.TransactionID,
+		&i.ExternalTxid,
+		&i.Amount,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const getWalletByID = `-- name: GetWalletByID :one
@@ -162,6 +264,28 @@ func (q *Queries) GetWalletTypeIDByCurrency(ctx context.Context, currency string
 	var id pgtype.UUID
 	err := row.Scan(&id)
 	return id, err
+}
+
+const getWithdrawalByID = `-- name: GetWithdrawalByID :one
+SELECT id, user_id, transaction_id, external_txid, amount, status, created_at, updated_at
+FROM withdrawals
+WHERE id = $1
+`
+
+func (q *Queries) GetWithdrawalByID(ctx context.Context, id int32) (Withdrawal, error) {
+	row := q.db.QueryRow(ctx, getWithdrawalByID, id)
+	var i Withdrawal
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.TransactionID,
+		&i.ExternalTxid,
+		&i.Amount,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const incrementWalletBalance = `-- name: IncrementWalletBalance :exec

@@ -69,7 +69,12 @@ func InitServices(
 		cfg, logger,
 	)
 
-	webhookService := webhook.NewService(providerService, logger, store, cfg, kafkaProducer)
+	webhookService := webhook.NewService(
+		providerService,
+		tenantsService,
+		logger, store, cfg,
+		kafkaProducer,
+	)
 
 	logger.Info("services initialized.")
 
