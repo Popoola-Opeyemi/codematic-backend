@@ -28,3 +28,18 @@ SELECT * FROM transactions WHERE reference = $1 LIMIT 1;
 UPDATE transactions
 SET status = $1, amount = $2, updated_at = now()
 WHERE id = $3; 
+
+-- name: GetTransactionByID :one
+SELECT * FROM transactions WHERE id = $1;
+
+-- name: ListTransactionsByUserID :many
+SELECT * FROM transactions WHERE wallet_id IN (SELECT id FROM wallets WHERE user_id = $1) ORDER BY created_at DESC LIMIT $2 OFFSET $3;
+
+-- name: ListTransactionsByTenantID :many
+SELECT * FROM transactions WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3;
+
+-- name: ListAllTransactions :many
+SELECT * FROM transactions ORDER BY created_at DESC LIMIT $1 OFFSET $2;
+
+-- name: ListTransactionsByStatus :many
+SELECT * FROM transactions WHERE status = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3; 

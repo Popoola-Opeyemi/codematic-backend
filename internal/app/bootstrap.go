@@ -6,6 +6,7 @@ import (
 	"codematic/internal/domain/auth"
 	"codematic/internal/domain/provider"
 	"codematic/internal/domain/tenants"
+	"codematic/internal/domain/transactions"
 	"codematic/internal/domain/user"
 	"codematic/internal/domain/wallet"
 	"codematic/internal/domain/webhook"
@@ -21,12 +22,13 @@ import (
 )
 
 type Services struct {
-	Wallet   wallet.Service
-	User     user.Service
-	Provider provider.Service
-	Tenants  tenants.Service
-	Auth     auth.Service
-	Webhook  webhook.Service
+	Wallet       wallet.Service
+	User         user.Service
+	Provider     provider.Service
+	Transactions transactions.Service
+	Tenants      tenants.Service
+	Auth         auth.Service
+	Webhook      webhook.Service
 }
 
 func InitServices(

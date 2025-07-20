@@ -66,6 +66,38 @@ definitions:
       webhook_url:
         type: string
     type: object
+  transactions.Transaction:
+    properties:
+      amount:
+        type: number
+      created_at:
+        type: string
+      currency_code:
+        type: string
+      error_reason:
+        type: string
+      fee:
+        type: number
+      id:
+        type: string
+      metadata:
+        additionalProperties: true
+        type: object
+      provider_id:
+        type: string
+      reference:
+        type: string
+      status:
+        type: string
+      tenant_id:
+        type: string
+      type:
+        type: string
+      updated_at:
+        type: string
+      wallet_id:
+        type: string
+    type: object
   wallet.Transaction:
     properties:
       amount:
@@ -345,6 +377,101 @@ paths:
       summary: Get tenant by slug
       tags:
       - tenants
+  /transactions:
+    get:
+      consumes:
+      - application/json
+      description: Lists transactions with access control and optional filters
+      parameters:
+      - description: Transaction status filter
+        in: query
+        name: status
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/transactions.Transaction'
+              type: array
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List transactions
+      tags:
+      - transactions
+  /transactions/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a single transaction by ID with access control
+      parameters:
+      - description: Transaction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/transactions.Transaction'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get a single transaction
+      tags:
+      - transactions
   /wallet/{wallet_id}/balance:
     get:
       consumes:

@@ -357,3 +357,13 @@ func DecodeBase64Bytes(encoded []byte) ([]byte, error) {
 	}
 	return decoded[:n], nil
 }
+
+// JSONBToMap converts a JSONB []byte to a map[string]interface{}
+func JSONBToMap(b []byte) map[string]interface{} {
+	if len(b) == 0 {
+		return nil
+	}
+	var m map[string]interface{}
+	_ = json.Unmarshal(b, &m)
+	return m
+}

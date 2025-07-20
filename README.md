@@ -193,6 +193,24 @@ The API is documented using Swagger/OpenAPI. See [`docs/swagger.yaml`](docs/swag
 - `POST /api/wallet/transfer` — Transfer funds between wallets
 - `POST /api/wallet/withdraw` — Withdraw funds from a wallet
 - `POST /api/webhook/{provider}` — Handle provider webhook
+- `GET /api/transactions/{id}` — Get a single transaction (access controlled)
+- `GET /api/transactions` — List transactions (with filters and access control)
+
+#### Transaction Endpoints
+
+- `GET /api/transactions/{id}`
+  - Get a single transaction by ID.
+  - **Access Control:**
+    - **User:** Can only get their own transactions.
+    - **Tenant Admin:** Can get transactions for their tenant.
+    - **Admin:** Can get any transaction.
+
+- `GET /api/transactions`
+  - List transactions with optional filters (`status`, `limit`, `offset`).
+  - **Access Control:**
+    - **User:** Only their own transactions.
+    - **Tenant Admin:** All transactions for their tenant, or filter by status.
+    - **Admin:** All transactions, or filter by status.
 
 For full request/response models and error codes, see the Swagger file or run the service and visit `/docs` if enabled.
 
