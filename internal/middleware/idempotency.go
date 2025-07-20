@@ -4,7 +4,9 @@ import (
 	"codematic/internal/config"
 	"codematic/internal/domain/idempotency"
 	"codematic/internal/shared/utils"
+	"database/sql"
 	"encoding/json"
+	"errors"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -20,107 +22,62 @@ func NewIdempotencyMiddleware(repo idempotency.Repository) *IdempotencyMiddlewar
 
 func (m *IdempotencyMiddleware) Handle(c *fiber.Ctx) error {
 	logger := config.GetLogger().Sugar()
-	logger.Info("Idempotency Middleware Init")
 
 	key := c.Get("Idempotency-Key")
 	if key == "" {
-		logger.Error("Missing Idempotency-Key header")
-		return utils.SendErrorResponse(c, fiber.StatusBadRequest, "Missing Idempotency-Key header")
+		return c.Next()
 	}
 
 	tenantID := utils.ExtractTenantFromJWT(c)
-	if tenantID == "" {
-		logger.Error("Missing X-Tenant-ID header")
-		return utils.SendErrorResponse(c, fiber.StatusBadRequest, "Missing X-Tenant-ID header")
-	}
-
-	if _, err := uuid.Parse(tenantID); err != nil {
-		logger.Errorf("Invalid Tenant ID UUID: %v", err)
-		return utils.SendErrorResponse(c, fiber.StatusBadRequest, "Invalid X-Tenant-ID header format")
-	}
-
-	endpoint := c.OriginalURL()
 	requestHash := utils.HashRequestBody(c.Body())
+	endpoint := c.OriginalURL()
 
-	logger.Infof("Idempotency ➤ tenantID=%s | key=%s | endpoint=%s | requestHash=%s", tenantID, key, endpoint, requestHash)
+	// check for any existing record for this (tenant, key, endpoint)
+	rec, err := m.Repo.GetByKeyAndEndpoint(c.Context(), tenantID, key, endpoint)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		logger.Errorf("idempotency lookup error: %v", err)
+		return utils.SendErrorResponse(c, fiber.StatusInternalServerError, "idempotency lookup failed")
+	}
 
-	// Check for cached record
-	record, err := m.Repo.Get(c.Context(), tenantID, key, endpoint, requestHash)
-	if err == nil && record != nil && record.ID.Valid && record.RequestHash == requestHash {
-		logger.Info("Returning cached idempotent response")
-
-		if len(record.ResponseBody) > 0 {
+	if rec != nil {
+		switch {
+		case rec.RequestHash == requestHash:
+			// same key and same payload return cached response
 			c.Response().Header.Set("Content-Type", fiber.MIMEApplicationJSONCharsetUTF8)
-			return c.Status(int(record.StatusCode.Int32)).Send(record.ResponseBody)
+			return c.Status(int(rec.StatusCode.Int32)).Send(rec.ResponseBody)
+
+		default:
+			// same key and different payload reject
+			return utils.SendErrorResponse(c, fiber.StatusConflict,
+				"idempotency key reused with different payload",
+			)
 		}
-
-		// Unexpected: record exists but response body is empty
-		logger.Error("Cached response body is empty")
-		return utils.SendErrorResponse(c, fiber.StatusInternalServerError, "Cached response is invalid")
 	}
 
-	if err != nil {
-		logger.Errorf("Error checking idempotency record: %v", err)
-	} else {
-		logger.Info("No idempotency record found")
-	}
-
-	// Proceed with request
-	logger.Info("Calling next handler...")
 	if err := c.Next(); err != nil {
-		logger.Errorf("Handler error: %v", err)
 		return err
 	}
 
+	// save
 	status := c.Response().StatusCode()
-	responseBody := c.Response().Body()
-
-	// Validate response is JSON
-	if !json.Valid(responseBody) {
-		logger.Error("Handler returned invalid JSON")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"status":  "error",
-			"message": "Invalid response format",
-		})
+	body := c.Response().Body()
+	if !json.Valid(body) {
+		return utils.SendErrorResponse(c, fiber.StatusInternalServerError,
+			"invalid JSON from handler",
+		)
 	}
 
-	cloned := make([]byte, len(responseBody))
-	copy(cloned, responseBody)
-
-	record, err = m.Repo.Get(c.Context(), tenantID, key, endpoint, requestHash)
-	if err != nil || record == nil || !record.ID.Valid {
-		logger.Info("Saving new idempotency record")
-
-		userID := c.Locals("user_id")
-		var userIDStr string
-		if userID != nil {
-			userIDStr, _ = userID.(string)
-		}
-
-		id := uuid.NewString()
-		err := m.Repo.Create(c.Context(), idempotency.CreateParams{
-			ID:           id,
-			TenantID:     tenantID,
-			UserID:       userIDStr,
-			Key:          key,
-			Endpoint:     endpoint,
-			RequestHash:  requestHash,
-			ResponseBody: cloned,
-			StatusCode:   status,
-		})
-		if err != nil {
-			logger.Errorf("Failed to create idempotency record: %v", err)
-		}
-	} else {
-		logger.Info("Updating existing idempotency record")
-		_, _ = m.Repo.UpdateResponse(c.Context(), idempotency.UpdateResponseParams{
-			TenantID:     tenantID,
-			Key:          key,
-			Endpoint:     endpoint,
-			ResponseBody: cloned,
-			StatusCode:   status,
-		})
-	}
+	userID, _ := c.Locals("user_id").(string)
+	_ = m.Repo.Create(c.Context(), idempotency.CreateParams{
+		ID:           uuid.NewString(),
+		TenantID:     tenantID,
+		UserID:       userID,
+		Key:          key,
+		Endpoint:     endpoint,
+		RequestHash:  requestHash,
+		ResponseBody: body,
+		StatusCode:   status,
+	})
 
 	return nil
 }

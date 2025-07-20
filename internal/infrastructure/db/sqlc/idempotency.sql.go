@@ -52,73 +52,33 @@ func (q *Queries) CreateIdempotencyKey(ctx context.Context, arg CreateIdempotenc
 	return err
 }
 
-const getIdempotencyRecord = `-- name: GetIdempotencyRecord :one
-SELECT id, tenant_id, user_id, idempotency_key, endpoint, request_hash, response_body, status_code, created_at, updated_at FROM idempotency_keys
-WHERE tenant_id = $1
+const getIdempotencyByKeyAndEndpoint = `-- name: GetIdempotencyByKeyAndEndpoint :one
+SELECT
+  id,
+  tenant_id,
+  user_id,
+  idempotency_key,
+  endpoint,
+  request_hash,
+  response_body,
+  status_code,
+  created_at,
+  updated_at
+FROM idempotency_keys
+WHERE tenant_id      = $1
   AND idempotency_key = $2
-  AND endpoint = $3
-  AND request_hash = $4
+  AND endpoint        = $3
 LIMIT 1
 `
 
-type GetIdempotencyRecordParams struct {
-	TenantID       pgtype.UUID
-	IdempotencyKey string
-	Endpoint       string
-	RequestHash    string
-}
-
-func (q *Queries) GetIdempotencyRecord(ctx context.Context, arg GetIdempotencyRecordParams) (IdempotencyKey, error) {
-	row := q.db.QueryRow(ctx, getIdempotencyRecord,
-		arg.TenantID,
-		arg.IdempotencyKey,
-		arg.Endpoint,
-		arg.RequestHash,
-	)
-	var i IdempotencyKey
-	err := row.Scan(
-		&i.ID,
-		&i.TenantID,
-		&i.UserID,
-		&i.IdempotencyKey,
-		&i.Endpoint,
-		&i.RequestHash,
-		&i.ResponseBody,
-		&i.StatusCode,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const updateIdempotencyKeyResponse = `-- name: UpdateIdempotencyKeyResponse :one
-UPDATE idempotency_keys
-SET
-  response_body = $1,
-  status_code = $2,
-  updated_at = now()
-WHERE tenant_id = $3
-  AND idempotency_key = $4
-  AND endpoint = $5
-RETURNING id, tenant_id, user_id, idempotency_key, endpoint, request_hash, response_body, status_code, created_at, updated_at
-`
-
-type UpdateIdempotencyKeyResponseParams struct {
-	ResponseBody   []byte
-	StatusCode     pgtype.Int4
+type GetIdempotencyByKeyAndEndpointParams struct {
 	TenantID       pgtype.UUID
 	IdempotencyKey string
 	Endpoint       string
 }
 
-func (q *Queries) UpdateIdempotencyKeyResponse(ctx context.Context, arg UpdateIdempotencyKeyResponseParams) (IdempotencyKey, error) {
-	row := q.db.QueryRow(ctx, updateIdempotencyKeyResponse,
-		arg.ResponseBody,
-		arg.StatusCode,
-		arg.TenantID,
-		arg.IdempotencyKey,
-		arg.Endpoint,
-	)
+func (q *Queries) GetIdempotencyByKeyAndEndpoint(ctx context.Context, arg GetIdempotencyByKeyAndEndpointParams) (IdempotencyKey, error) {
+	row := q.db.QueryRow(ctx, getIdempotencyByKeyAndEndpoint, arg.TenantID, arg.IdempotencyKey, arg.Endpoint)
 	var i IdempotencyKey
 	err := row.Scan(
 		&i.ID,

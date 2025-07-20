@@ -6,6 +6,7 @@ import (
 
 	"codematic/internal/thirdparty/paystack"
 
+	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
 )
 
@@ -23,8 +24,10 @@ func NewPaystackProvider(logger *zap.Logger, baseURL, apiKey string) *PaystackPr
 
 func (p *PaystackProvider) InitDeposit(ctx context.Context,
 	req DepositRequest) (GatewayResponse, error) {
+	amountInKobo := req.Amount.Mul(decimal.NewFromInt(100))
+
 	resp, err := p.client.InitializeTransaction(&paystack.InitializeTransactionRequest{
-		Amount:   req.Amount.String(),
+		Amount:   amountInKobo.String(),
 		Email:    req.Email,
 		Metadata: req.Metadata,
 	})

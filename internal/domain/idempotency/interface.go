@@ -13,6 +13,10 @@ type Repository interface {
 	WithTx(q *db.Queries) Repository
 
 	Create(ctx context.Context, arg CreateParams) error
-	Get(ctx context.Context, tenantID, key, endpoint, requestHash string) (*db.IdempotencyKey, error)
-	UpdateResponse(ctx context.Context, arg UpdateResponseParams) (*db.IdempotencyKey, error)
+	GetByKeyAndEndpoint(
+		ctx context.Context,
+		tenantID string,
+		key string,
+		endpoint string,
+	) (*db.IdempotencyKey, error)
 }
