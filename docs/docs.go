@@ -345,98 +345,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/wallet/deposit": {
-            "post": {
-                "description": "Deposits a specified amount into the user's wallet",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "wallet"
-                ],
-                "summary": "Deposit funds into a wallet",
-                "parameters": [
-                    {
-                        "description": "Deposit request",
-                        "name": "depositRequest",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/wallet/initiate-deposit": {
-            "post": {
-                "description": "Initiates a deposit with full validation and provider integration",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "wallet"
-                ],
-                "summary": "Initiate a deposit with provider integration",
-                "parameters": [
-                    {
-                        "description": "Deposit request",
-                        "name": "depositRequest",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/wallet.DepositRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/wallet/transfer": {
             "post": {
                 "description": "Transfers a specified amount from one wallet to another",
@@ -837,33 +745,6 @@ const docTemplate = `{
                 }
             }
         },
-        "wallet.DepositRequest": {
-            "type": "object",
-            "required": [
-                "amount",
-                "channel",
-                "currency",
-                "user_id"
-            ],
-            "properties": {
-                "amount": {
-                    "type": "string"
-                },
-                "channel": {
-                    "type": "string"
-                },
-                "currency": {
-                    "type": "string"
-                },
-                "metadata": {
-                    "type": "object",
-                    "additionalProperties": true
-                },
-                "user_id": {
-                    "type": "string"
-                }
-            }
-        },
         "wallet.Transaction": {
             "type": "object",
             "properties": {
@@ -893,6 +774,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "status": {
+                    "type": "string"
+                },
+                "tenant_id": {
                     "type": "string"
                 },
                 "type": {

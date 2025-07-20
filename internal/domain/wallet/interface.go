@@ -8,8 +8,7 @@ import (
 )
 
 type Service interface {
-	Deposit(ctx context.Context, data DepositForm) error
-	InitiateDeposit(ctx context.Context, data DepositRequest) (string, error)
+	InitiateDeposit(ctx context.Context, data DepositForm) error
 	Withdraw(ctx context.Context, data WithdrawalForm) error
 	Transfer(ctx context.Context, data TransferForm) error
 	GetBalance(ctx context.Context, walletID string) (decimal.Decimal, error)

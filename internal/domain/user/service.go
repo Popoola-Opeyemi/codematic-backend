@@ -76,7 +76,7 @@ func (s *userService) CreateUser(ctx context.Context, req *CreateUserRequest) (d
 	}
 
 	userID := uuid.New()
-	role := string(RoleUser)
+	role := string(model.RoleUser)
 	if req.Role != "" {
 		role = string(req.Role)
 	}

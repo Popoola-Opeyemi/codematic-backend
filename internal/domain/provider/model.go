@@ -10,9 +10,8 @@ type (
 	}
 
 	DepositRequest struct {
-		UserID   string
-		WalletID string
 		Amount   decimal.Decimal
+		Channel  string
 		Metadata map[string]interface{}
 	}
 

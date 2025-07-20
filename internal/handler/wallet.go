@@ -15,8 +15,9 @@ import (
 )
 
 type Wallet struct {
-	service wallet.Service
-	env     *Environment
+	service     wallet.Service
+	userService user.Service
+	env         *Environment
 }
 
 func (h *Wallet) Init(basePath string, env *Environment) error {
@@ -33,6 +34,7 @@ func (h *Wallet) Init(basePath string, env *Environment) error {
 		env.Logger,
 		env.KafkaProducer,
 	)
+	h.userService = userService
 
 	group := env.Fiber.Group(basePath + "/wallet")
 
@@ -43,28 +45,44 @@ func (h *Wallet) Init(basePath string, env *Environment) error {
 
 	idm := middleware.NewIdempotencyMiddleware(idempotencyRepo)
 
+	userOnly := protected.Use(utils.RequireRole(model.RoleUser))
+
 	// Add idempotency middleware to transaction-creating routes
-	protected.Post("/deposit", idm.Handle, h.Deposit)
-	protected.Post("/initiate-deposit", idm.Handle, h.InitiateDeposit)
-	protected.Post("/withdraw", idm.Handle, h.Withdraw)
-	protected.Post("/transfer", idm.Handle, h.Transfer)
-	protected.Post("/get-balance", h.GetBalance)
-	protected.Post("/get-transactions", h.GetTransactions)
+	userOnly.Post("/initiate-deposit", idm.Handle, h.InitiateDeposit)
+	userOnly.Post("/withdraw", idm.Handle, h.Withdraw)
+	userOnly.Post("/transfer", idm.Handle, h.Transfer)
+	userOnly.Post("/get-balance", h.GetBalance)
+	userOnly.Post("/get-transactions", h.GetTransactions)
 
 	return nil
 }
 
-// InitiateDeposit godoc
-// @Summary      Initiate a deposit with provider integration
-// @Description  Initiates a deposit with full validation and provider integration
-// @Tags         wallet
-// @Accept       json
-// @Produce      json
-// @Param        depositRequest  body  wallet.DepositRequest  true  "Deposit request"
-// @Success      200  {object}  map[string]string
-// @Failure      400  {object}  map[string]string
-// @Router       /wallet/initiate-deposit [post]
+// validateUserActive checks if the user is active and valid
+func (h *Wallet) validateUserActive(c *fiber.Ctx) error {
+	userID := utils.ExtractUserIDFromJWT(c)
+	if userID == "" {
+		return utils.SendErrorResponse(c, fiber.StatusUnauthorized, "User ID not found in token")
+	}
+
+	// Check if user exists and is active
+	ctx := context.Background()
+	user, err := h.userService.GetUserByID(ctx, userID)
+	if err != nil {
+		return utils.SendErrorResponse(c, fiber.StatusUnauthorized, "User not found")
+	}
+
+	if !user.IsActive.Bool {
+		return utils.SendErrorResponse(c, fiber.StatusUnauthorized, "User is suspended")
+	}
+
+	return nil
+}
+
 func (h *Wallet) InitiateDeposit(c *fiber.Ctx) error {
+	if err := h.validateUserActive(c); err != nil {
+		return err
+	}
+
 	var req wallet.DepositRequest
 
 	if err := c.BodyParser(&req); err != nil {
@@ -79,50 +97,17 @@ func (h *Wallet) InitiateDeposit(c *fiber.Ctx) error {
 	}
 
 	// Set the user ID from JWT token
-	req.UserID = utils.ExtractUserIDFromJWT(c)
-	if req.UserID == "" {
+	userID := utils.ExtractUserIDFromJWT(c)
+	if userID == "" {
 		return utils.SendErrorResponse(c, fiber.StatusUnauthorized, "User ID not found in token")
 	}
 
-	ctx := context.Background()
-	reference, err := h.service.InitiateDeposit(ctx, req)
-	if err != nil {
-		return utils.SendErrorResponse(c,
-			fiber.StatusBadRequest,
-			err.Error(),
-		)
+	userEmail := utils.ExtractUserIDFromJWT(c)
+	if userEmail == "" {
+		return utils.SendErrorResponse(c, fiber.StatusUnauthorized, "User Email not found in token")
 	}
 
-	return utils.SendSuccessResponse(c, fiber.StatusOK, fiber.Map{
-		"status":    "pending",
-		"reference": reference,
-		"message":   "Deposit initiated successfully. Please complete the payment with the provider.",
-	})
-}
-
-// Deposit godoc
-// @Summary      Deposit funds into a wallet
-// @Description  Deposits a specified amount into the user's wallet
-// @Tags         wallet
-// @Accept       json
-// @Produce      json
-// @Param        depositRequest  body  object  true  "Deposit request"
-// @Success      200  {object}  map[string]string
-// @Failure      400  {object}  map[string]string
-// @Router       /wallet/deposit [post]
-func (h *Wallet) Deposit(c *fiber.Ctx) error {
-	var req wallet.DepositRequest
-
-	if err := c.BodyParser(&req); err != nil {
-		return utils.SendErrorResponse(c,
-			fiber.StatusBadRequest,
-			model.ErrInvalidInputError.Error(),
-		)
-	}
-
-	if err := validate.Struct(&req); err != nil {
-		return utils.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
-	}
+	tenantID := utils.ExtractTenantFromJWT(c)
 
 	amount, err := decimal.NewFromString(req.Amount)
 	if err != nil {
@@ -131,28 +116,31 @@ func (h *Wallet) Deposit(c *fiber.Ctx) error {
 			"invalid amount",
 		)
 	}
-
-	userID := utils.ExtractUserIDFromJWT(c)
-	tenantID := utils.ExtractTenantFromJWT(c)
+	metadata := map[string]interface{}{
+		"email": userEmail,
+	}
 
 	form := wallet.DepositForm{
 		UserID:   userID,
 		TenantID: tenantID,
 		Amount:   amount,
-		Provider: req.Currency,
 		Channel:  req.Channel,
-		Metadata: req.Metadata,
+		Metadata: metadata,
 	}
 
 	ctx := context.Background()
-	if err := h.service.Deposit(ctx, form); err != nil {
+	if err := h.service.InitiateDeposit(ctx, form); err != nil {
 		return utils.SendErrorResponse(c,
 			fiber.StatusBadRequest,
 			err.Error(),
 		)
 	}
 
-	return utils.SendSuccessResponse(c, fiber.StatusOK, fiber.Map{"status": "success"})
+	return utils.SendSuccessResponse(c, fiber.StatusOK, fiber.Map{
+		"status":    "pending",
+		"reference": "",
+		"message":   "Deposit initiated successfully. Please complete the payment with the provider.",
+	})
 
 }
 
@@ -167,6 +155,11 @@ func (h *Wallet) Deposit(c *fiber.Ctx) error {
 // @Failure      400  {object}  map[string]string
 // @Router       /wallet/withdraw [post]
 func (h *Wallet) Withdraw(c *fiber.Ctx) error {
+	// Validate user is active before proceeding
+	if err := h.validateUserActive(c); err != nil {
+		return err
+	}
+
 	var req wallet.WithdrawalRequest
 
 	if err := c.BodyParser(&req); err != nil {
@@ -176,9 +169,15 @@ func (h *Wallet) Withdraw(c *fiber.Ctx) error {
 		)
 	}
 
+	// Ensure the user can only withdraw from their own wallet
+	userID := utils.ExtractUserIDFromJWT(c)
+	if req.UserID != userID {
+		return utils.SendErrorResponse(c, fiber.StatusForbidden, "You can only withdraw from your own wallet")
+	}
+
 	amount, err := decimal.NewFromString(req.Amount)
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid amount"})
+		return utils.SendErrorResponse(c, fiber.StatusBadRequest, "invalid amount")
 	}
 
 	form := wallet.WithdrawalForm{
@@ -192,7 +191,7 @@ func (h *Wallet) Withdraw(c *fiber.Ctx) error {
 
 	ctx := context.Background()
 	if err := h.service.Withdraw(ctx, form); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+		return utils.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
 	}
 
 	return utils.SendSuccessResponse(c, fiber.StatusOK, fiber.Map{"status": "success"})
@@ -210,16 +209,26 @@ func (h *Wallet) Withdraw(c *fiber.Ctx) error {
 // @Failure      400  {object}  map[string]string
 // @Router       /wallet/transfer [post]
 func (h *Wallet) Transfer(c *fiber.Ctx) error {
+	// Validate user is active before proceeding
+	if err := h.validateUserActive(c); err != nil {
+		return err
+	}
 
 	var req wallet.TransferRequest
 
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid input"})
+		return utils.SendErrorResponse(c, fiber.StatusBadRequest, "invalid input")
+	}
+
+	// Ensure the user can only transfer from their own wallet
+	userID := utils.ExtractUserIDFromJWT(c)
+	if req.UserID != userID {
+		return utils.SendErrorResponse(c, fiber.StatusForbidden, "You can only transfer from your own wallet")
 	}
 
 	amount, err := decimal.NewFromString(req.Amount)
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid amount"})
+		return utils.SendErrorResponse(c, fiber.StatusBadRequest, "invalid amount")
 	}
 
 	form := wallet.TransferForm{
@@ -233,10 +242,10 @@ func (h *Wallet) Transfer(c *fiber.Ctx) error {
 
 	ctx := context.Background()
 	if err := h.service.Transfer(ctx, form); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+		return utils.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
 	}
 
-	return c.Status(200).JSON(fiber.Map{"status": "success"})
+	return utils.SendSuccessResponse(c, fiber.StatusOK, fiber.Map{"status": "success"})
 }
 
 // GetBalance godoc
@@ -250,16 +259,24 @@ func (h *Wallet) Transfer(c *fiber.Ctx) error {
 // @Failure      400  {object}  map[string]string
 // @Router       /wallet/{wallet_id}/balance [get]
 func (h *Wallet) GetBalance(c *fiber.Ctx) error {
+	// Validate user is active before proceeding
+	if err := h.validateUserActive(c); err != nil {
+		return err
+	}
+
 	walletID := c.Params("wallet_id")
+
+	// TODO: Add validation to ensure user can only access their own wallet balance
+	// This would require checking if the wallet belongs to the authenticated user
 
 	ctx := context.Background()
 
 	balance, err := h.service.GetBalance(ctx, walletID)
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+		return utils.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
 	}
 
-	return c.Status(200).JSON(fiber.Map{"balance": balance.String()})
+	return utils.SendSuccessResponse(c, fiber.StatusOK, fiber.Map{"balance": balance.String()})
 }
 
 // GetTransactions godoc
@@ -275,18 +292,24 @@ func (h *Wallet) GetBalance(c *fiber.Ctx) error {
 // @Failure      400  {object}  map[string]string
 // @Router       /wallet/{wallet_id}/transactions [get]
 func (h *Wallet) GetTransactions(c *fiber.Ctx) error {
+	// Validate user is active before proceeding
+	if err := h.validateUserActive(c); err != nil {
+		return err
+	}
 
 	walletID := c.Params("wallet_id")
 
-	limit := c.QueryInt("limit", 20)
+	// TODO: Add validation to ensure user can only access their own wallet transactions
+	// This would require checking if the wallet belongs to the authenticated user
 
+	limit := c.QueryInt("limit", 20)
 	offset := c.QueryInt("offset", 0)
 
 	ctx := context.Background()
 
 	txs, err := h.service.GetTransactions(ctx, walletID, limit, offset)
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+		return utils.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
 	}
-	return c.Status(200).JSON(fiber.Map{"transactions": txs})
+	return utils.SendSuccessResponse(c, fiber.StatusOK, fiber.Map{"transactions": txs})
 }

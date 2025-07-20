@@ -1,20 +1,22 @@
 -- +goose up
 -- +goose statementbegin
 
-CREATE TABLE "providers" (
-  "id" UUID PRIMARY KEY,
+CREATE TABLE "currencies" (
+  "code" VARCHAR PRIMARY KEY, 
   "name" VARCHAR NOT NULL,
-  "code" VARCHAR UNIQUE NOT NULL,
-  "config" JSONB,
+  "symbol" VARCHAR NOT NULL,
   "is_active" BOOLEAN DEFAULT true,
   "created_at" TIMESTAMPTZ DEFAULT now() NOT NULL,
   "updated_at" TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
-CREATE TABLE "currencies" (
-  "code" VARCHAR PRIMARY KEY, 
+CREATE TABLE "providers" (
+  "id" UUID PRIMARY KEY,
   "name" VARCHAR NOT NULL,
-  "symbol" VARCHAR NOT NULL,
+  "code" VARCHAR UNIQUE NOT NULL,
+  "supported_channels" TEXT[] NOT NULL DEFAULT '{}',
+  "supported_currencies" TEXT[] NOT NULL DEFAULT '{}',
+  "config" JSONB,
   "is_active" BOOLEAN DEFAULT true,
   "created_at" TIMESTAMPTZ DEFAULT now() NOT NULL,
   "updated_at" TIMESTAMPTZ DEFAULT now() NOT NULL
@@ -81,52 +83,61 @@ INSERT INTO currencies (code, name, symbol) VALUES
   ('GBP', 'British Pound', '£');
 
 -- Seed wallet types
-INSERT INTO wallet_types (id, name, currency, description) VALUES
-  ('aabdd0a6-e35a-4788-85c4-598fbbb12d9e', 'Naira Wallet', 'NGN', 'Wallet for Nigerian Naira'),
-  ('ac18e3c9-dfc3-4d2a-a8a9-cf95a0359346', 'Dollar Wallet', 'USD', 'Wallet for United States Dollar'),
-  ('ca10450e-40f1-41d2-af19-23f3dcd9d5a8', 'Pound Wallet', 'GBP', 'Wallet for British Pound');
+INSERT INTO wallet_types (id, name, currency, description, created_at, updated_at) VALUES
+  ('aabdd0a6-e35a-4788-85c4-598fbbb12d9e', 'Naira Wallet', 'NGN', 'Wallet for Nigerian Naira', now(), now()),
+  ('ac18e3c9-dfc3-4d2a-a8a9-cf95a0359346', 'Dollar Wallet', 'USD', 'Wallet for United States Dollar', now(), now()),
+  ('ca10450e-40f1-41d2-af19-23f3dcd9d5a8', 'Pound Wallet', 'GBP', 'Wallet for British Pound', now(), now());
 
-INSERT INTO providers (id, name, code, config, is_active)
+-- Seed providers
+INSERT INTO providers (id, name, code, supported_channels, config, is_active, created_at, updated_at)
 VALUES
   (
     gen_random_uuid(),
     'Paystack',
     'paystack',
+    ARRAY['card', 'bank_transfer'],
     '{
       "base_url": "https://api.paystack.co",
       "secret_key": "sk_test_6d247fc20f3e89b2702be48d926bbd86d4e7239b",
       "public_key": "pk_test_008b51881a11a8b7c5ae04a548e0c0b65328153b",
       "webhook_secret": "PAYSTACK_WEBHOOK_SECRET"
     }'::jsonb,
-    true
+    true,
+    now(),
+    now()
   ),
   (
     gen_random_uuid(),
     'Flutterwave',
     'flutterwave',
+    ARRAY['card', 'bank_transfer'],
     '{
       "base_url": "https://api.flutterwave.com/v3",
       "secret_key": "FLWSECK_TEST-b77bfdd76bd39ab9bd9edc4fd33f6154-X",
       "public_key": "FLWPUBK_TEST-a52a0b9da395cbab3ad412b40cc608c5-X",
       "webhook_secret": "FLUTTERWAVE_WEBHOOK_SECRET",
-      "encryption_key":"FLWSECK_TESTa320cb3aefe7"
+      "encryption_key": "FLWSECK_TESTa320cb3aefe7"
     }'::jsonb,
-    true
+    true,
+    now(),
+    now()
   ),
   (
     gen_random_uuid(),
     'Stripe',
     'stripe',
+    ARRAY['card'],
     '{
       "base_url": "https://api.stripe.com",
       "secret_key": "STRIPE_SECRET_KEY",
       "webhook_secret": "STRIPE_WEBHOOK_SECRET"
     }'::jsonb,
-    true
+    true,
+    now(),
+    now()
   );
 
 -- +goose statementend
-
 
 -- +goose down
 -- +goose statementbegin

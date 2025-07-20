@@ -1,12 +1,6 @@
 package user
 
-type UserRole string
-
-const (
-	RolePlatformAdmin UserRole = "PLATFORM_ADMIN"
-	RoleTenantAdmin   UserRole = "TENANT_ADMIN"
-	RoleUser          UserRole = "USER"
-)
+import "codematic/internal/shared/model"
 
 type CreateUserRequest struct {
 	TenantID string
@@ -14,5 +8,5 @@ type CreateUserRequest struct {
 	Phone    string
 	Password string
 	IsActive bool
-	Role     UserRole // PLATFORM_ADMIN, TENANT_ADMIN, USER
+	Role     model.UserRole // PLATFORM_ADMIN, TENANT_ADMIN, USER
 }

@@ -93,23 +93,22 @@ func (r *walletRepository) CreateWallet(ctx context.Context, userID,
 
 func (r *walletRepository) CreateTransaction(ctx context.Context, tx *Transaction) error {
 	uid, _ := utils.StringToPgUUID(tx.ID)
+	tid, _ := utils.StringToPgUUID(tx.TenantID)
 	wid, _ := utils.StringToPgUUID(tx.WalletID)
 	pid, _ := utils.StringToPgUUID(tx.Provider)
 	meta, _ := json.Marshal(tx.Metadata)
 
-	fee := tx.Fee
 	_, err := r.q.CreateTransaction(ctx, db.CreateTransactionParams{
-		ID:          uid,
-		TenantID:    pgtype.UUID{}, // TODO: set tenant id
-		WalletID:    wid,
-		ProviderID:  pid,
-		Reference:   tx.Reference,
-		Type:        tx.Type,
-		Status:      tx.Status,
-		Amount:      tx.Amount,
-		Fee:         fee,
-		Metadata:    meta,
-		ErrorReason: pgtype.Text{String: tx.Error, Valid: tx.Error != ""},
+		ID:         uid,
+		TenantID:   tid,
+		WalletID:   wid,
+		ProviderID: pid,
+		Reference:  tx.Reference,
+		Type:       tx.Type,
+		Status:     tx.Status,
+		Amount:     tx.Amount,
+		Fee:        tx.Fee,
+		Metadata:   meta,
 	})
 	return err
 }
