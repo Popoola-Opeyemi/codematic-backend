@@ -82,3 +82,8 @@ RETURNING id, user_id, transaction_id, external_txid, amount, status, created_at
 SELECT id, user_id, transaction_id, external_txid, amount, status, created_at, updated_at
 FROM withdrawals
 WHERE id = $1;
+
+-- name: UpdateDepositStatusByTransactionID :exec
+UPDATE deposits
+SET status = $1, updated_at = NOW()
+WHERE transaction_id = $2;

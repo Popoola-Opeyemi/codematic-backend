@@ -475,6 +475,22 @@ func (q *Queries) ListWalletsByUserID(ctx context.Context, userID pgtype.UUID) (
 	return items, nil
 }
 
+const updateDepositStatusByTransactionID = `-- name: UpdateDepositStatusByTransactionID :exec
+UPDATE deposits
+SET status = $1, updated_at = NOW()
+WHERE transaction_id = $2
+`
+
+type UpdateDepositStatusByTransactionIDParams struct {
+	Status        string
+	TransactionID pgtype.UUID
+}
+
+func (q *Queries) UpdateDepositStatusByTransactionID(ctx context.Context, arg UpdateDepositStatusByTransactionIDParams) error {
+	_, err := q.db.Exec(ctx, updateDepositStatusByTransactionID, arg.Status, arg.TransactionID)
+	return err
+}
+
 const updateWalletBalance = `-- name: UpdateWalletBalance :exec
 UPDATE wallets SET balance = $1, updated_at = now() WHERE id = $2
 `

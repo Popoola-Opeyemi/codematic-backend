@@ -29,7 +29,8 @@ func (r *walletRepository) WithTx(q *db.Queries) Repository {
 	return NewRepository(q, r.p)
 }
 
-func (r *walletRepository) GetWallet(ctx context.Context, walletID string) (*Wallet, error) {
+func (r *walletRepository) GetWallet(ctx context.Context,
+	walletID string) (*Wallet, error) {
 	uid, err := utils.StringToPgUUID(walletID)
 	if err != nil {
 		return nil, err
@@ -118,11 +119,12 @@ func (r *walletRepository) ListTransactions(ctx context.Context,
 	walletID string, limit, offset int) ([]Transaction, error) {
 	wid, _ := utils.StringToPgUUID(walletID)
 
-	rows, err := r.q.ListTransactionsByWalletID(ctx, db.ListTransactionsByWalletIDParams{
-		WalletID: wid,
-		Limit:    int32(limit),
-		Offset:   int32(offset),
-	})
+	rows, err := r.q.ListTransactionsByWalletID(ctx,
+		db.ListTransactionsByWalletIDParams{
+			WalletID: wid,
+			Limit:    int32(limit),
+			Offset:   int32(offset),
+		})
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +234,8 @@ func (r *walletRepository) GetWalletByUserAndCurrency(ctx context.Context,
 	}, nil
 }
 
-func (r *walletRepository) GetTransactionByReference(ctx context.Context, reference string) (*Transaction, error) {
+func (r *walletRepository) GetTransactionByReference(ctx context.Context,
+	reference string) (*Transaction, error) {
 	tx, err := r.q.GetTransactionByReference(ctx, reference)
 	if err != nil {
 		return nil, err
@@ -257,7 +260,11 @@ func (r *walletRepository) GetTransactionByReference(ctx context.Context, refere
 	}, nil
 }
 
-func (r *walletRepository) UpdateTransactionStatusAndAmount(ctx context.Context, id, status string, amount decimal.Decimal) error {
+func (r *walletRepository) UpdateTransactionStatusAndAmount(
+	ctx context.Context, id,
+	status string,
+	amount decimal.Decimal,
+) error {
 	uid, err := utils.StringToPgUUID(id)
 	if err != nil {
 		return err
@@ -355,4 +362,18 @@ func (r *walletRepository) GetWithdrawalByID(ctx context.Context, id int) (*With
 		CreatedAt:     utils.FromPgTimestamp(row.CreatedAt),
 		UpdatedAt:     utils.FromPgTimestamp(row.UpdatedAt),
 	}, nil
+}
+
+func (r *walletRepository) UpdateDepositStatus(ctx context.Context, transactionID,
+	status string) error {
+	tid, err := utils.StringToPgUUID(transactionID)
+	if err != nil {
+		return err
+	}
+
+	return r.q.UpdateDepositStatusByTransactionID(ctx,
+		db.UpdateDepositStatusByTransactionIDParams{
+			Status:        status,
+			TransactionID: tid,
+		})
 }

@@ -24,14 +24,6 @@ type Service interface {
 
 	// Kafka event handler
 	HandlePaystackKafkaEvent(ctx context.Context, key, value []byte)
-
-	// Deposit operations
-	CreateDeposit(ctx context.Context, deposit *Deposit) error
-	GetDepositByID(ctx context.Context, id int) (*Deposit, error)
-
-	// Withdrawal operations
-	CreateWithdrawal(ctx context.Context, withdrawal *Withdrawal) error
-	GetWithdrawalByID(ctx context.Context, id int) (*Withdrawal, error)
 }
 
 type Repository interface {
@@ -52,4 +44,14 @@ type Repository interface {
 
 	GetTransactionByReference(ctx context.Context, reference string) (*Transaction, error)
 	UpdateTransactionStatusAndAmount(ctx context.Context, id, status string, amount decimal.Decimal) error
+
+	// Deposit operations
+	CreateDeposit(ctx context.Context, deposit *Deposit) error
+	GetDepositByID(ctx context.Context, id int) (*Deposit, error)
+
+	// Withdrawal operations
+	CreateWithdrawal(ctx context.Context, withdrawal *Withdrawal) error
+	GetWithdrawalByID(ctx context.Context, id int) (*Withdrawal, error)
+	// Deposit update operation
+	UpdateDepositStatus(ctx context.Context, transactionID string, status string) error
 }

@@ -132,8 +132,22 @@ func (s *WalletService) InitiateDeposit(ctx context.Context, data DepositForm) (
 			return err
 		}
 
-		response = gateway
+		// Create deposit record
+		deposit := &Deposit{
+			UserID:        data.UserID,
+			TransactionID: transaction.ID,
+			ExternalTxID:  gateway.Reference, // or use gateway.ProviderID if that's the txid
+			Amount:        data.Amount.InexactFloat64(),
+			Status:        StatusPending,
+			CreatedAt:     time.Now(),
+			UpdatedAt:     time.Now(),
+		}
+		if err := repo.CreateDeposit(ctx, deposit); err != nil {
+			s.logger.Sugar().Errorf("Failed to create deposit record: %v", err)
+			return err
+		}
 
+		response = gateway
 		return nil
 	})
 
@@ -163,15 +177,33 @@ func (s *WalletService) Withdraw(ctx context.Context, data WithdrawalForm) error
 		tx := &Transaction{
 			ID:        uuid.NewString(),
 			WalletID:  wallet.ID,
-			Type:      "withdrawal",
-			Status:    "success",
+			Type:      TransactionWithdrawal,
+			Status:    StatusCompleted,
 			Amount:    data.Amount,
 			Fee:       decimal.Zero,
 			Provider:  data.Provider,
 			Reference: uuid.NewString(),
 			Metadata:  data.Metadata,
 		}
-		return repo.CreateTransaction(ctx, tx)
+		if err := repo.CreateTransaction(ctx, tx); err != nil {
+			return err
+		}
+
+		// Create withdrawal record
+		withdrawal := &Withdrawal{
+			UserID:        data.UserID,
+			TransactionID: tx.ID,
+			ExternalTxID:  tx.Reference, // or use a provider reference if available
+			Amount:        data.Amount.InexactFloat64(),
+			Status:        StatusCompleted,
+			CreatedAt:     time.Now(),
+			UpdatedAt:     time.Now(),
+		}
+		if err := repo.CreateWithdrawal(ctx, withdrawal); err != nil {
+			return err
+		}
+
+		return nil
 	})
 }
 
@@ -310,7 +342,14 @@ func (s *WalletService) HandlePaystackKafkaEvent(ctx context.Context, key, value
 		if err := repo.UpdateWalletBalance(ctx, wallet.ID, wallet.Balance); err != nil {
 			return err
 		}
-		return repo.UpdateTransactionStatusAndAmount(ctx, tx.ID, StatusCompleted, amount)
+		if err := repo.UpdateTransactionStatusAndAmount(ctx, tx.ID, StatusCompleted, amount); err != nil {
+			return err
+		}
+		// Update deposit status to completed
+		if err := repo.UpdateDepositStatus(ctx, tx.ID, StatusCompleted); err != nil {
+			s.logger.Sugar().Errorf("Failed to update deposit status for transaction %s: %v", tx.ID, err)
+		}
+		return nil
 	})
 	if err != nil {
 		s.logger.Sugar().Errorf("Failed to complete deposit for reference %s: %v", reference, err)
