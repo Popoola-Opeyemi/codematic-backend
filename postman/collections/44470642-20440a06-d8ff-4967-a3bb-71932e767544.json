@@ -481,8 +481,19 @@
 						"disableBodyPruning": true
 					},
 					"request": {
-						"method": "GET",
-						"header": []
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{API_BASE_URL}}/webhook/replay/paystack",
+							"host": [
+								"{{API_BASE_URL}}"
+							],
+							"path": [
+								"webhook",
+								"replay",
+								"paystack"
+							]
+						}
 					},
 					"response": []
 				}
