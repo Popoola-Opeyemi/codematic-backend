@@ -18,6 +18,8 @@ services:
     depends_on:
       - redis
       - postgres
+      - grafana
+      - prometheus
       - kafka
 
   codematic-dev:

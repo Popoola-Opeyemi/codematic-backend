@@ -39,7 +39,6 @@ RUN apk add --no-cache curl && \
     rm -rf ./bin
 
 # Install swag CLI (Swagger/OpenAPI generator)
-# We unset GOOS and GOARCH temporarily so Go installs a binary for this container's platform
 RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg/mod \
     env -u GOOS -u GOARCH go install github.com/swaggo/swag/cmd/swag@latest && \
@@ -62,23 +61,37 @@ ARG BUILD_TIME
 RUN go build -ldflags="-X 'main.gitHash=${GIT_HASH}' -X 'main.buildTime=${BUILD_TIME}'" -o codematic ./cmd
 
 ##############################
-# STAGE 4: Final minimal production image
+# STAGE 4: Migration binary builder
 ##############################
 FROM builder AS migrate-builder
 RUN go build -o migrate ./cmd/migrate
 
-FROM scratch AS prod
+##############################
+# STAGE 5: Final minimal production image
+##############################
+FROM alpine AS prod
 
-COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=builder /etc/passwd /etc/passwd
+RUN apk add --no-cache tzdata ca-certificates
 
 WORKDIR /app
 
+# Copy Go binaries
 COPY --from=builder /app/codematic /app/codematic
 COPY --from=migrate-builder /app/migrate /app/migrate
 
-USER 1000
+# Copy SSL certs
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+# Copy migration files
+COPY --from=builder /app/internal/infrastructure/db/migrations /app/internal/infrastructure/db/migrations
+
+# Create logs directory with correct ownership
+RUN adduser -D appuser && \
+    mkdir -p /app/logs && \
+    chown appuser:appuser /app/logs
+
+USER appuser
+
 EXPOSE 8080
 
-ENTRYPOINT ["/bin/sh", "-c", "/app/migrate && ./codematic"]
+ENTRYPOINT ["/bin/sh", "-c", "/app/migrate && /app/codematic"]
